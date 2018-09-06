@@ -6,10 +6,8 @@
 
     class Designer {
         constructor (container) {
-            
             let interaction = new Interaction(container); // 单例
             let renderer = new Renderer(interaction); // 多例
-
         }
     }
 
@@ -33,6 +31,7 @@
             };
 
             this.container = container;
+            this.interaction = container.querySelector('.interaction');
             this.act = null;
 
             this.mx = 0;
@@ -59,7 +58,7 @@
 
                 ev.preventDefault();
                 this.scale = this.getScale(ev.wheelDeltaY);
-                const rect = getPosition(ev);
+                const rect = this.getPosition(ev);
 
                 this.scaleInteraction(rect.x, rect.y, this.scale);
 
@@ -77,8 +76,11 @@
             return this.wheel / config.WHEEL_SCALE_RATE;
         }
 
-        scaleInteraction (scale, x, y) {
-
+        scaleInteraction (x, y, scale) {
+            const con = this.container;
+            const inter = this.interaction;
+            inter.style.width = con.clientWidth * scale + 'px';
+            inter.style.height = con.clientHeight * scale + 'px';
         }
 
         getPosition (ev) {
