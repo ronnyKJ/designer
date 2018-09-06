@@ -77,10 +77,22 @@
         }
 
         scaleInteraction (x, y, scale) {
-            const con = this.container;
+            const conInfo = this.getContainerInfo();
+            const width = conInfo.width;
+            const height = conInfo.height;
+            const newWidth = width * scale;
+            const newHeight = height * scale;
+
             const inter = this.interaction;
-            inter.style.width = con.clientWidth * scale + 'px';
-            inter.style.height = con.clientHeight * scale + 'px';
+            inter.style.width = `${newWidth}px`;
+            inter.style.height = `${newHeight}px`;
+
+            const dx = -(x * newWidth / width - x);
+            const dy = -(y * newHeight / height - y);
+            // 使用 translate 会变模糊
+            inter.style.left = `${dx}px`;
+            inter.style.top = `${dy}px`;
+
         }
 
         getPosition (ev) {
@@ -89,6 +101,13 @@
             const y = ev.pageY - rect.left;
 
             return {x, y}
+        }
+
+        getContainerInfo () {
+            const width = this.container.clientWidth;
+            const height = this.container.clientHeight;
+
+            return {width, height};
         }
     }
 
