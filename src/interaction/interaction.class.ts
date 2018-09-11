@@ -47,6 +47,13 @@ export default class Interaction {
         this.wheel = this.config.INIT_WHEEL_VALUE;
 
         this.init();
+
+        window.addEventListener('click', (ev:MouseEvent) => {
+            ev.preventDefault();
+            let rect = this.interaction.getBoundingClientRect();
+
+            console.log(ev.pageX, ev.pageY, rect);
+        }, false);
     }
 
     init () {
@@ -58,10 +65,11 @@ export default class Interaction {
 
             ev.preventDefault();
             this.scale = this.getScale(ev.wheelDeltaY);
-            const rect = this.getPositionInContainer(ev);
+            const position = this.getPositionInContainer(ev);
+            
+            console.log(position, this.scale);
 
-            this.scaleInteraction(rect.x, rect.y, this.scale);
-
+            this.scaleInteractionFromOrigin(position.x, position.y, this.scale);
 
             Logger.log(this.scale);
         }, false);
@@ -76,10 +84,10 @@ export default class Interaction {
         return this.wheel / config.WHEEL_SCALE_RATE;
     }
 
-    scaleInteraction (x, y, scale) {
-        const conInfo = this.getContainerInfo();
-        const width = conInfo.width;
-        const height = conInfo.height;
+    scaleInteractionFromOrigin (x, y, scale) {
+        const rect = this.getContainerRect();
+        const width = rect.width;
+        const height = rect.height;
         const newWidth = width * scale;
         const newHeight = height * scale;
 
@@ -87,36 +95,32 @@ export default class Interaction {
         inter.style.width = `${newWidth}px`;
         inter.style.height = `${newHeight}px`;
 
-        const dx = -(newWidth / width - 1) * x;
-        const dy = -(newHeight / height - 1) * y;
+        const dx = x * (1 - scale);
+        const dy = y * (1 - scale);
+
+
         // 使用 translate 会变模糊
         inter.style.left = `${dx}px`;
         inter.style.top = `${dy}px`;
 
     }
 
-    getInteractionInfo () {
-        // const rect = this.container.getBoundingClientRect();
-        // const x = ev.pageX - rect.left;
-        // const y = ev.pageY - rect.top;
-
-        // const scale = this.scale;
-
-        // return {offsetX, offsetY, scale};
-    }
-
     getPositionInContainer (ev:MouseEvent) {
-        const rect = this.container.getBoundingClientRect();
-        const x = ev.pageX - rect.left;
-        const y = ev.pageY - rect.top;
+        // 求出 鼠标在缩放之后的 interaction 中的位置
+        // 映射到原始 container 中的位置
+        const interRect = this.interaction.getBoundingClientRect();
+        const tmpX = ev.pageX - interRect.left;
+        const tmpY = ev.pageY - interRect.top;
+
+        const x = tmpX / this.scale;
+        const y = tmpY / this.scale;
+
+        console.log(interRect.width, interRect.height, interRect.left, interRect.top);
 
         return {x, y}
     }
 
-    getContainerInfo () {
-        const width = this.container.clientWidth;
-        const height = this.container.clientHeight;
-
-        return {width, height};
+    getContainerRect () {
+        return this.container.getBoundingClientRect();
     }
 }

@@ -5,7 +5,7 @@ export default {
         let div = document.querySelector(`.${styles.logger}`);
         if(!div){
             div = document.createElement('div');
-            div.id = 'logger';
+            div.className = styles.logger;
             document.querySelector('#app').appendChild(div);
         }
         div.innerHTML = msg;
