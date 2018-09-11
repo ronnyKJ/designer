@@ -1,6 +1,8 @@
+import * as styles from './logger.less';
+
 export default {
     log: function (msg): void {
-        let div = document.querySelector('#logger');
+        let div = document.querySelector(`.${styles.logger}`);
         if(!div){
             div = document.createElement('div');
             div.id = 'logger';

@@ -1,7 +1,7 @@
 'use strict'
 
 import Logger from '../logger/logger';
-import * as styles from '../app.less';
+import * as styles from './interaction.less';
 
 interface IConfig {
     MAX_WHEEL_VALUE : number;
