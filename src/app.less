@@ -1,0 +1,129 @@
+html, body {
+    padding: 0;
+    margin: 0;
+    background-color: blanchedalmond;
+}
+
+#logger {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.container{
+    margin: 100px auto;
+    width: 1000px;
+    height: 500px;
+    outline: 1px #ddd solid;
+    position: relative;
+}
+
+
+.canvas{
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background-color: #EEE;
+    overflow: hidden;
+}
+
+.object{
+    position: absolute;
+    background-color: bisque;
+}
+
+.base{
+    width: 10%;
+    height: 20%;
+    left: 50%;
+    top: 30%;
+    opacity: 0.5;
+}
+
+.box{
+    position: absolute;
+    background-color: blueviolet;
+    opacity: 0.5;
+    width: 100px;
+    height: 100px;    
+    left: 500px;
+    top: 150px; 
+}
+
+.interaction {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: rgb(166, 209, 202);
+}
+
+.adjuster{
+    position: absolute;
+    width: 10%;
+    height: 20%;
+    left: 50%;
+    top: 30%;   
+}
+
+.outline{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px #000 solid;
+    box-sizing: border-box;
+}
+
+.knob{
+    width: 3px;
+    height: 3px;
+    background-color: red;
+    border: 1px blue solid;
+    position: absolute;
+    box-sizing: content-box;
+}
+
+.nw{
+    top: -2px;
+    left: -2px;
+}
+
+.n{
+    top: -2px;
+    left: 50%;
+    margin-left: -2px; 
+}
+
+.ne{
+    top: -2px;
+    right: -2px;
+}
+
+.e{
+    right: -2px;
+    top: 50%;
+    margin-top: -2px;     
+}
+
+.se{
+    right: -2px;
+    bottom: -2px;    
+}
+
+.s{
+    bottom: -2px;
+    left: 50%;
+    margin-left: -2px; 
+}
+
+.sw{
+    bottom: -2px;
+    left: -2px; 
+}
+
+.w{
+    left: -2px;
+    top: 50%;
+    margin-top: -2px;     
+}
