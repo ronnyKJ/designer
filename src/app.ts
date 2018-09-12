@@ -6,10 +6,10 @@ import * as rendererStyles from './renderer/renderer.less';
 
 document.querySelector('#app').innerHTML = `
 <div class="${appStyles.container}">
-    <div class="${rendererStyles.renderer}">
+    <!-- <div class="${rendererStyles.renderer}">
         <div class="${rendererStyles.object} ${rendererStyles.base}"></div>
         <div id="object" class="${rendererStyles.object} ${rendererStyles.box}"></div>
-    </div>
+    </div> -->
 
     <div class="${interactionStyles.interaction}">
         <!-- <div class="${interactionStyles.adjuster}">

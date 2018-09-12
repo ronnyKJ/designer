@@ -48,16 +48,16 @@ export default class Interaction {
 
         this.init();
 
-        window.addEventListener('click', (ev:MouseEvent) => {
-            ev.preventDefault();
-            // let rect = this.interaction.getBoundingClientRect();
-            // let px = ev.pageX - rect.left;
-            // let py = ev.pageY - rect.top;
+        // window.addEventListener('click', (ev:MouseEvent) => {
+        //     ev.preventDefault();
+        //     // let rect = this.interaction.getBoundingClientRect();
+        //     // let px = ev.pageX - rect.left;
+        //     // let py = ev.pageY - rect.top;
 
-            const {x, y} = this.getPositionInContainer(ev);
+        //     const {x, y} = this.getPositionInContainer(ev);
 
-            console.log(x, y);
-        }, false);
+        //     console.log(x, y);
+        // }, false);
     }
 
     init () {
@@ -70,9 +70,7 @@ export default class Interaction {
             ev.preventDefault();
             const position = this.getPositionInContainer(ev); // 先获取位置
             this.scale = this.getScale(ev.wheelDeltaY); // 后缩放
-            // this.scale = Math.floor(this.scale)
-            
-            console.log(position.x, position.y);
+
             this.scaleInteractionFromOrigin(position, this.scale);
 
             Logger.log(this.scale);
@@ -118,7 +116,7 @@ export default class Interaction {
         const x = tmpX / this.scale;
         const y = tmpY / this.scale;
 
-        const containerRect = this.container.getBoundingClientRect();
+        const containerRect = this.getContainerRect();
         const offsetX = ev.pageX - containerRect.left - x;
         const offsetY = ev.pageY - containerRect.top - y;
 
