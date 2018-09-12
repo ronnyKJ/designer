@@ -50,9 +50,13 @@ export default class Interaction {
 
         window.addEventListener('click', (ev:MouseEvent) => {
             ev.preventDefault();
-            let rect = this.interaction.getBoundingClientRect();
+            // let rect = this.interaction.getBoundingClientRect();
+            // let px = ev.pageX - rect.left;
+            // let py = ev.pageY - rect.top;
 
-            console.log(ev.pageX, ev.pageY, rect);
+            const {x, y} = this.getPositionInContainer(ev);
+
+            console.log(x, y);
         }, false);
     }
 
@@ -64,12 +68,12 @@ export default class Interaction {
             // ev.pageY 相对于页面
 
             ev.preventDefault();
-            this.scale = this.getScale(ev.wheelDeltaY);
-            const position = this.getPositionInContainer(ev);
+            const position = this.getPositionInContainer(ev); // 先获取位置
+            this.scale = this.getScale(ev.wheelDeltaY); // 后缩放
+            // this.scale = Math.floor(this.scale)
             
-            console.log(position, this.scale);
-
-            this.scaleInteractionFromOrigin(position.x, position.y, this.scale);
+            console.log(position.x, position.y);
+            this.scaleInteractionFromOrigin(position, this.scale);
 
             Logger.log(this.scale);
         }, false);
@@ -84,7 +88,7 @@ export default class Interaction {
         return this.wheel / config.WHEEL_SCALE_RATE;
     }
 
-    scaleInteractionFromOrigin (x, y, scale) {
+    scaleInteractionFromOrigin (info, scale) {
         const rect = this.getContainerRect();
         const width = rect.width;
         const height = rect.height;
@@ -95,9 +99,8 @@ export default class Interaction {
         inter.style.width = `${newWidth}px`;
         inter.style.height = `${newHeight}px`;
 
-        const dx = x * (1 - scale);
-        const dy = y * (1 - scale);
-
+        const dx = info.x * (1 - scale) + info.offsetX;
+        const dy = info.y * (1 - scale) + info.offsetY;
 
         // 使用 translate 会变模糊
         inter.style.left = `${dx}px`;
@@ -115,9 +118,11 @@ export default class Interaction {
         const x = tmpX / this.scale;
         const y = tmpY / this.scale;
 
-        console.log(interRect.width, interRect.height, interRect.left, interRect.top);
+        const containerRect = this.container.getBoundingClientRect();
+        const offsetX = ev.pageX - containerRect.left - x;
+        const offsetY = ev.pageY - containerRect.top - y;
 
-        return {x, y}
+        return {x, y, offsetX, offsetY};
     }
 
     getContainerRect () {
