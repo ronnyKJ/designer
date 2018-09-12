@@ -21,7 +21,7 @@ export default class Interaction {
     private interaction: HTMLElement;
     private act: String;
     private isMouseDown: Boolean;
-    private scale: number;
+    private scaleValue: number;
     private wheel: number;
     
     constructor (container) {
@@ -43,7 +43,7 @@ export default class Interaction {
         this.mx = 0;
         this.my = 0;
         this.isMouseDown = false;
-        this.scale = this.config.INIT_SCALE;
+        this.scaleValue = this.config.INIT_SCALE;
         this.wheel = this.config.INIT_WHEEL_VALUE;
 
         this.init();
@@ -68,16 +68,15 @@ export default class Interaction {
             // ev.pageY 相对于页面
 
             ev.preventDefault();
-            const position = this.getPositionInContainer(ev); // 先获取位置
-            this.scale = this.getScale(ev.wheelDeltaY); // 后缩放
+            const state = this.getOriginState(ev); // 先获取位置
+            this.scaleValue = this.getScaleValue(ev.wheelDeltaY); // 后缩放
+            const info = this.transform(state.offsetX, state.offsetY, state.originX, state.originY, this.scaleValue); // 变形
+            this.setStyle(info);
 
-            this.scaleInteractionFromOrigin(position, this.scale);
-
-            Logger.log(this.scale);
         }, false);
     }
 
-    getScale (wheelDeltaY) {
+    getScaleValue (wheelDeltaY) {
         const config = this.config;
 
         let w = this.wheel;
@@ -86,44 +85,51 @@ export default class Interaction {
         return this.wheel / config.WHEEL_SCALE_RATE;
     }
 
-    scaleInteractionFromOrigin (info, scale) {
-        const rect = this.getContainerRect();
-        const width = rect.width;
-        const height = rect.height;
-        const newWidth = width * scale;
-        const newHeight = height * scale;
-
-        const inter = this.interaction;
-        inter.style.width = `${newWidth}px`;
-        inter.style.height = `${newHeight}px`;
-
-        const dx = info.x * (1 - scale) + info.offsetX;
-        const dy = info.y * (1 - scale) + info.offsetY;
-
-        // 使用 translate 会变模糊
-        inter.style.left = `${dx}px`;
-        inter.style.top = `${dy}px`;
-
-    }
-
-    getPositionInContainer (ev:MouseEvent) {
+    getOriginState (ev:MouseEvent) {
         // 求出 鼠标在缩放之后的 interaction 中的位置
         // 映射到原始 container 中的位置
         const interRect = this.interaction.getBoundingClientRect();
         const tmpX = ev.pageX - interRect.left;
         const tmpY = ev.pageY - interRect.top;
 
-        const x = tmpX / this.scale;
-        const y = tmpY / this.scale;
+        const originX = tmpX / this.scaleValue;
+        const originY = tmpY / this.scaleValue;
 
         const containerRect = this.getContainerRect();
-        const offsetX = ev.pageX - containerRect.left - x;
-        const offsetY = ev.pageY - containerRect.top - y;
+        const offsetX = ev.pageX - containerRect.left - originX;
+        const offsetY = ev.pageY - containerRect.top - originY;
 
-        return {x, y, offsetX, offsetY};
+        return {originX, originY, offsetX, offsetY};
     }
 
     getContainerRect () {
         return this.container.getBoundingClientRect();
+    }
+
+    transform (offsetX:number = 0, offsetY:number = 0, originX:number, originY:number, scale:number) {
+        const rect = this.getContainerRect();
+        const width = rect.width;
+        const height = rect.height;
+        const newWidth = width * scale;
+        const newHeight = height * scale;
+
+        const dx = originX * (1 - scale) + offsetX;
+        const dy = originY * (1 - scale) + offsetY;
+
+        return {
+            offsetX: dx,
+            offsetY: dy,
+            width: newWidth,
+            height: newHeight
+        };
+    }
+
+    setStyle (info) {
+        let style = this.interaction.style;
+        style.width = `${info.width}px`;
+        style.height = `${info.height}px`;
+        // 使用 translate 会变模糊
+        style.left = `${info.offsetX}px`;
+        style.top = `${info.offsetY}px`;
     }
 }
