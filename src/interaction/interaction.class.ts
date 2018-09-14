@@ -2,6 +2,7 @@
 
 import Logger from '../logger/logger';
 import * as styles from './interaction.less';
+import utils from '../utils/utils';
 
 interface IConfig {
     MAX_WHEEL_VALUE : number;
@@ -30,7 +31,7 @@ export default class Interaction {
     private wheelValue: number;
     private isSpaceDown: boolean = false;
     private isMouseLeftButtonDown: Boolean = false;
-    private movableWhenContained: Boolean = false;
+    private movableWhenContained: Boolean = true;
     
     constructor (container) {
 
@@ -54,7 +55,7 @@ export default class Interaction {
 
         this.init();
         
-        this.setCursorStyle();
+        this.setCursorStyleAndMouseMove();
     }
 
     init () {
@@ -69,21 +70,21 @@ export default class Interaction {
             if (ev.altKey) { // 对齐 PS
                 const state = this.getSourceState(ev); // 先获取位置
                 this.scaleValue = this.getScaleValue(ev.wheelDeltaY); // 后缩放
-                const style = this.transform(state.offsetX, state.offsetY, state.originX, state.originY, this.scaleValue); // 变形
+                const style = this.getTransformStyle(state.offsetX, state.offsetY, state.originX, state.originY, this.scaleValue); // 变形
                 this.setStyle(style);
-            } else {
+            } else if (this.scaleValue > 1 || (this.movableWhenContained && this.scaleValue <= 1)) {
                 const rate = this.config.TOUCHPAD_PAN_RATE;
-                this.pan(ev.wheelDeltaX / rate, ev.wheelDeltaY / rate);
+                this.getPanStyle(ev.wheelDeltaX / rate, ev.wheelDeltaY / rate);
             }
         }, false);
 
     }
 
-    pan (offsetX:number, offsetY:number) {
+    getPanStyle (offsetX:number, offsetY:number) {
         const position = this.getEntityPosition();
         const state = {
-            offsetX: position.left + offsetX,
-            offsetY: position.top + offsetY
+            x: position.left + offsetX,
+            y: position.top + offsetY
         };
         this.setStyle(state);  
     }
@@ -93,7 +94,7 @@ export default class Interaction {
 
         let w = this.wheelValue;
         w -= wheelDeltaY;
-        this.wheelValue = Math.min(Math.max(w, config.MIN_WHEEL_VALUE), config.MAX_WHEEL_VALUE);
+        this.wheelValue = utils.range(w, config.MIN_WHEEL_VALUE, config.MAX_WHEEL_VALUE);
         return this.wheelValue / config.WHEEL_SCALE_RATE;
     }
 
@@ -125,19 +126,31 @@ export default class Interaction {
     }
 
     // 相对于 base
-    transform (offsetX:number = 0, offsetY:number = 0, originX:number, originY:number, scale:number) {
+    getTransformStyle (offsetX:number = 0, offsetY:number = 0, originX:number, originY:number, scale:number) {
         const rect = this.getContainerRect();
         const width = rect.width;
         const height = rect.height;
         const newWidth = width * scale;
         const newHeight = height * scale;
 
-        const dx = originX * (1 - scale) + offsetX;
-        const dy = originY * (1 - scale) + offsetY;
+        let dx;
+        let dy;
+
+        if (!this.movableWhenContained && scale <= 1) { // 小于容器时，不能移动
+            dx = (width - newWidth) / 2;
+            dy = (height - newHeight) / 2;            
+        } else {
+            dx = originX * (1 - scale) + offsetX;
+            dy = originY * (1 - scale) + offsetY;            
+        }
+
+        if (1) {
+            
+        }
 
         return {
-            offsetX: dx,
-            offsetY: dy,
+            x: dx,
+            y: dy,
             width: newWidth,
             height: newHeight
         };
@@ -146,17 +159,14 @@ export default class Interaction {
     setStyle (info) {
         // offset 是相对于 base
         let style = this.interaction.style;
-        info.width && (style.width = `${info.width}px`);
-        info.height && (style.height = `${info.height}px`);
+        info.hasOwnProperty('width') && (style.width = `${info.width}px`);
+        info.hasOwnProperty('height') && (style.height = `${info.height}px`);
         // 使用 translate 会变模糊
-        info.offsetX && (style.left = `${info.offsetX}px`);
-        info.offsetY && (style.top = `${info.offsetY}px`);
+        info.hasOwnProperty('x') && (style.left = `${info.x}px`);
+        info.hasOwnProperty('y') && (style.top = `${info.y}px`);
     }
 
-    setCursorStyle () {
-        // space mouse
-        this.isSpaceDown = false;
-        this.isMouseLeftButtonDown = false;
+    setCursorStyleAndMouseMove () {
 
         let startX = 0;
         let startY = 0;
@@ -184,8 +194,8 @@ export default class Interaction {
 
         window.addEventListener('mousemove', (ev:MouseEvent) => {
             ev.preventDefault();
-            if (this.isMouseLeftButtonDown && this.isSpaceDown) {
-                this.pan(ev.clientX - startX, ev.clientY - startY);
+            if (this.isMouseLeftButtonDown && this.isSpaceDown && this.scaleValue > 1) {
+                this.getPanStyle(ev.clientX - startX, ev.clientY - startY);
                 startX = ev.clientX;
                 startY = ev.clientY;
             }
@@ -202,5 +212,5 @@ export default class Interaction {
             this.isSpaceDown = false;
             this.container.style.cursor = 'default';
         }, false);
-    }    
+    }
 }
