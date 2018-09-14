@@ -55,11 +55,7 @@ export default class Interaction {
         this.mx = 0;
         this.my = 0;
 
-        this.init();
-    }
-
-    init() {
-        this.setCursorStyleAndMouseMove();
+        this.initAction();
     }
 
     getPanStyle(offsetX: number, offsetY: number) {
@@ -164,7 +160,7 @@ export default class Interaction {
         return { x, y };
     }
 
-    setCursorStyleAndMouseMove() {
+    initAction() {
 
         let device = this.device = {
             altKey: false,
@@ -189,7 +185,6 @@ export default class Interaction {
             scaleValue: staticConfig.INIT_SCALE
         };       
 
-
         let self = this;
         function wrap (callback) {
             return function (ev) {
@@ -205,20 +200,7 @@ export default class Interaction {
         }
 
         this.container.addEventListener(WHEEL, wrap((device, state, ev) => {
-            // ev.clientY === ev.y
-            // ev.layerY 相对于父容器
-            // ev.pageY 相对于页面
-            // ev.offsetY 相对于target的位置
-
-            if (device.altKey) { // 缩放 alt+滚动
-                const info = this.getSourceInfo(ev); // 先获取位置
-                state.scaleValue = this.getScaleValue(device.wheelDeltaY); // 后缩放
-                const style = this.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
-                this.setStyle(style);
-            } else if (this.isMovable()) { // 平移
-                const rate = staticConfig.TRACKPAD_PAN_RATE;
-                this.getPanStyle(device.wheelDeltaX / rate, device.wheelDeltaY / rate);
-            }
+            this.onWheel(device, state, ev);
         }), false);
 
         this.container.addEventListener(POINT_DOWN, wrap((device, state, ev) => {
@@ -268,6 +250,23 @@ export default class Interaction {
         }
     }
 
+    onWheel(device, state, ev) {
+            // ev.clientY === ev.y
+            // ev.layerY 相对于父容器
+            // ev.pageY 相对于页面
+            // ev.offsetY 相对于target的位置
+
+            if (device.altKey) { // 缩放 alt+滚动
+                const info = this.getSourceInfo(ev); // 先获取位置
+                state.scaleValue = this.getScaleValue(device.wheelDeltaY); // 后缩放
+                const style = this.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
+                this.setStyle(style);
+            } else if (this.isMovable()) { // 平移
+                const rate = staticConfig.TRACKPAD_PAN_RATE;
+                this.getPanStyle(device.wheelDeltaX / rate, device.wheelDeltaY / rate);
+            }
+    }
+
     onKeyDown(device, state, ev) {
         if (device.spaceKey && !device.isMouseLeftButtonDown) {
             this.container.style.cursor = CURSOR_GRAB;
@@ -290,6 +289,7 @@ export default class Interaction {
         return !(this.movableWhenContained === false && this.state.scaleValue <= 1);
     }
 
+    // 键盘事件属性
     setKeyboardAttributes(device, ev) {
         device.keyCode = ev.keyCode;
 
@@ -304,9 +304,8 @@ export default class Interaction {
         }
     }
 
+    // 鼠标事件属性
     setMouseAttributes(device, ev) {
-        device.mouseButtonCode = ev.type === POINT_DOWN? ev.button : -1;
-
         if (ev.type === POINT_UP) {
             device.isMouseLeftButtonDown = false;
             device.mouseButtonCode = -1;
