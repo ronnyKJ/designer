@@ -11,6 +11,7 @@ interface IConfig {
     INIT_SCALE : number;
     WHEEL_SCALE_RATE: number;
     TOUCHPAD_PAN_RATE: number;
+    KEEP_INSIDE: number;
 }
 
 // 概念
@@ -30,8 +31,10 @@ export default class Interaction {
     private scaleValue: number;
     private wheelValue: number;
     private isSpaceDown: boolean = false;
-    private isMouseLeftButtonDown: Boolean = false;
-    private movableWhenContained: Boolean = true;
+    private isMouseLeftButtonDown: boolean = false;
+    private movableWhenContained: boolean = true;
+    private visibleSideWidth: number = 0;
+    private visibleSideHeight: number = 0;
     
     constructor (container) {
 
@@ -42,9 +45,14 @@ export default class Interaction {
             INIT_SCALE : 1,
             WHEEL_SCALE_RATE: 1000,
             TOUCHPAD_PAN_RATE: 4,
+            KEEP_INSIDE: 0.2
         };
 
         this.container = container;
+        const rect = this.getContainerRect();
+        this.visibleSideWidth = rect.width * this.config.KEEP_INSIDE;
+        this.visibleSideHeight = rect.height * this.config.KEEP_INSIDE;
+
         this.interaction = container.querySelector(`.${styles.interaction}`);
         this.act = null;
 
@@ -72,7 +80,7 @@ export default class Interaction {
                 this.scaleValue = this.getScaleValue(ev.wheelDeltaY); // 后缩放
                 const style = this.getTransformStyle(state.offsetX, state.offsetY, state.originX, state.originY, this.scaleValue); // 变形
                 this.setStyle(style);
-            } else if (this.scaleValue > 1 || (this.movableWhenContained && this.scaleValue <= 1)) {
+            } else if (this.isMovable()) {
                 const rate = this.config.TOUCHPAD_PAN_RATE;
                 this.getPanStyle(ev.wheelDeltaX / rate, ev.wheelDeltaY / rate);
             }
@@ -81,12 +89,16 @@ export default class Interaction {
     }
 
     getPanStyle (offsetX:number, offsetY:number) {
-        const position = this.getEntityPosition();
-        const state = {
-            x: position.left + offsetX,
-            y: position.top + offsetY
-        };
-        this.setStyle(state);  
+        const info = this.getEntityInfo();
+
+        let x = info.left + offsetX; 
+        let y = info.top + offsetY;
+
+        const tmp = this.keepVisible(x, y, info.width, info.height);
+        x = tmp.x;
+        y = tmp.y;
+
+        this.setStyle({x, y});
     }
 
     getScaleValue (wheelDeltaY) {
@@ -115,10 +127,13 @@ export default class Interaction {
         return {originX, originY, offsetX, offsetY};
     }
 
-    getEntityPosition () {
-        const left = parseInt(this.interaction.style.left) || 0;
-        const top = parseInt(this.interaction.style.top) || 0;
-        return {top, left};
+    getEntityInfo () {
+        const i = this.interaction;
+        const left = parseInt(i.style.left) || 0;
+        const top = parseInt(i.style.top) || 0;
+        const width = i.clientWidth;
+        const height = i.clientHeight;
+        return {top, left, width, height};
     }
 
     getContainerRect () {
@@ -128,31 +143,31 @@ export default class Interaction {
     // 相对于 base
     getTransformStyle (offsetX:number = 0, offsetY:number = 0, originX:number, originY:number, scale:number) {
         const rect = this.getContainerRect();
-        const width = rect.width;
-        const height = rect.height;
-        const newWidth = width * scale;
-        const newHeight = height * scale;
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
+        const entityWidth = containerWidth * scale;
+        const entityHeight = containerHeight * scale;
 
-        let dx;
-        let dy;
+        let x;
+        let y;
 
-        if (!this.movableWhenContained && scale <= 1) { // 小于容器时，不能移动
-            dx = (width - newWidth) / 2;
-            dy = (height - newHeight) / 2;            
+        if (this.isMovable()) {
+            x = originX * (1 - scale) + offsetX;
+            y = originY * (1 - scale) + offsetY;
+
+            const tmp = this.keepVisible(x, y, entityWidth, entityHeight);
+            x = tmp.x;
+            y = tmp.y;
         } else {
-            dx = originX * (1 - scale) + offsetX;
-            dy = originY * (1 - scale) + offsetY;            
-        }
-
-        if (1) {
-            
+            x = (containerWidth - entityWidth) / 2;
+            y = (containerHeight - entityHeight) / 2;
         }
 
         return {
-            x: dx,
-            y: dy,
-            width: newWidth,
-            height: newHeight
+            x: x,
+            y: y,
+            width: entityWidth,
+            height: entityHeight
         };
     }
 
@@ -164,6 +179,24 @@ export default class Interaction {
         // 使用 translate 会变模糊
         info.hasOwnProperty('x') && (style.left = `${info.x}px`);
         info.hasOwnProperty('y') && (style.top = `${info.y}px`);
+    }
+
+    keepVisible (x, y, entityWidth, entityHeight) {
+        const cRect = this.getContainerRect();
+
+        const tmp1 = this.visibleSideWidth - entityWidth;
+        (x < tmp1) && (x = tmp1);
+        
+        const tmp2 = cRect.width - this.visibleSideWidth;
+        (x > tmp2) && (x = tmp2);
+
+        const tmp3 = this.visibleSideHeight - entityHeight;
+        (y < tmp3) && (y = tmp3);
+        
+        const tmp4 = cRect.height - this.visibleSideHeight;
+        (y > tmp4) && (y = tmp4);
+
+        return {x, y};
     }
 
     setCursorStyleAndMouseMove () {
@@ -194,7 +227,7 @@ export default class Interaction {
 
         window.addEventListener('mousemove', (ev:MouseEvent) => {
             ev.preventDefault();
-            if (this.isMouseLeftButtonDown && this.isSpaceDown && this.scaleValue > 1) {
+            if (this.isMouseLeftButtonDown && this.isSpaceDown && this.isMovable()) {
                 this.getPanStyle(ev.clientX - startX, ev.clientY - startY);
                 startX = ev.clientX;
                 startY = ev.clientY;
@@ -212,5 +245,10 @@ export default class Interaction {
             this.isSpaceDown = false;
             this.container.style.cursor = 'default';
         }, false);
+    }
+
+    isMovable ():boolean {
+        // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
+        return !(this.movableWhenContained === false && this.scaleValue <= 1);
     }
 }
