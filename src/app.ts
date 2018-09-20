@@ -27,4 +27,7 @@ document.querySelector('#app').innerHTML = `
 </div>
 `;
 
-new Designer(document.querySelector(`.${appStyles.container}`));
+new Designer(document.querySelector(`.${appStyles.container}`), {
+    canvasWidth: 200,
+    canvasHeight: 150,
+});

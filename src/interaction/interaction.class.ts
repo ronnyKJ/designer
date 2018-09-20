@@ -3,9 +3,9 @@
 import * as styles from './interaction.less';
 import utils from '../utils/utils';
 
-const POINT_DOWN = 'mousedown';
-const POINT_MOVE = 'mousemove';
-const POINT_UP = 'mouseup';
+const POINTER_DOWN = 'mousedown';
+const POINTER_MOVE = 'mousemove';
+const POINTER_UP = 'mouseup';
 const POINT_CLICK = 'click';
 const WHEEL = 'wheel';
 const KEY_DOWN = 'keydown';
@@ -15,15 +15,15 @@ const CURSOR_DEFAULT = 'default';
 const CURSOR_GRAB = '-webkit-grab';
 const CURSOR_GRABBING = '-webkit-grabbing';
 
-const staticConfig = {
-    MAX_WHEEL_VALUE: 10000,
-    INIT_WHEEL_VALUE: 1000,
-    MIN_WHEEL_VALUE: 100,
-    INIT_SCALE: 1,
-    WHEEL_SCALE_RATE: 1000,
-    TRACKPAD_PAN_RATE: 4,
-    KEEP_INSIDE: 0.2
-};
+const MAX_WHEEL_VALUE = 10000;
+const INIT_WHEEL_VALUE = 1000;
+const MIN_WHEEL_VALUE = 100;
+const INIT_SCALE = 1;
+const WHEEL_SCALE_RATE = 1000;
+const TRACKPAD_PAN_RATE = -1;
+const TRACKPAD_PINCH_RATE = 12;
+const KEEP_INSIDE = 0.2;
+
 
 // 概念
 // base 初始化时的状态
@@ -33,8 +33,6 @@ const staticConfig = {
 // origin 缩放的原点
 
 export default class Interaction {
-    private mx: number;
-    private my: number;
     private container: HTMLElement;
     private interaction: HTMLElement;
     private movableWhenContained: boolean = true;
@@ -42,18 +40,28 @@ export default class Interaction {
     private visibleSideHeight: number = 0;
     private state;
     private device;
+    private canvasOriginWidth;
+    private canvasOriginHeight;
 
-    constructor(container) {
+    constructor(container, options) {
+        options = options || {};
 
         this.container = container;
         const rect = this.getContainerRect();
-        this.visibleSideWidth = rect.width * staticConfig.KEEP_INSIDE;
-        this.visibleSideHeight = rect.height * staticConfig.KEEP_INSIDE;
+        this.visibleSideWidth = rect.width * KEEP_INSIDE;
+        this.visibleSideHeight = rect.height * KEEP_INSIDE;
 
         this.interaction = container.querySelector(`.${styles.interaction}`);
+        let style = this.interaction.style;
+        style.width = options.canvasWidth + 'px';
+        style.height = options.canvasHeight + 'px';
+        style.left = (rect.width - options.canvasWidth) / 2 + 'px';
+        style.top = (rect.height - options.canvasHeight) / 2 + 'px';
+        this.canvasOriginWidth = options.canvasWidth;
+        this.canvasOriginHeight = options.canvasHeight;
 
-        this.mx = 0;
-        this.my = 0;
+
+        this.movableWhenContained = options.movableWhenContained || true;
 
         this.initAction();
     }
@@ -85,7 +93,7 @@ export default class Interaction {
         const offsetX = ev.pageX - containerRect.left - originX;
         const offsetY = ev.pageY - containerRect.top - originY;
 
-        return { originX, originY, offsetX, offsetY };
+        return { originX, originY, offsetX, offsetY};
     }
 
     getEntityInfo() {
@@ -103,11 +111,10 @@ export default class Interaction {
 
     // 相对于 base
     getTransformStyle(offsetX: number = 0, offsetY: number = 0, originX: number, originY: number, scale: number) {
-        const rect = this.getContainerRect();
-        const containerWidth = rect.width;
-        const containerHeight = rect.height;
-        const entityWidth = containerWidth * scale;
-        const entityHeight = containerHeight * scale;
+        const width = this.canvasOriginWidth;
+        const height = this.canvasOriginHeight;
+        const scaledWidth = width * scale;
+        const scaledHeight = height * scale;
 
         let x;
         let y;
@@ -116,19 +123,19 @@ export default class Interaction {
             x = originX * (1 - scale) + offsetX;
             y = originY * (1 - scale) + offsetY;
 
-            const tmp = this.keepVisible(x, y, entityWidth, entityHeight);
+            const tmp = this.keepVisible(x, y, scaledWidth, scaledHeight);
             x = tmp.x;
             y = tmp.y;
         } else {
-            x = (containerWidth - entityWidth) / 2;
-            y = (containerHeight - entityHeight) / 2;
+            x = (scaledWidth - width) / 2;
+            y = (scaledHeight - height) / 2;
         }
 
         return {
             x: x,
             y: y,
-            width: entityWidth,
-            height: entityHeight
+            width: scaledWidth,
+            height: scaledHeight
         };
     }
 
@@ -181,16 +188,20 @@ export default class Interaction {
         let state = this.state = {
             startX: 0,
             startY: 0,
-            wheelValue: staticConfig.INIT_WHEEL_VALUE,
-            scaleValue: staticConfig.INIT_SCALE
+            wheelValue: INIT_WHEEL_VALUE,
+            scaleValue: INIT_SCALE
         };       
 
         let self = this;
         function wrap (callback) {
             return function (ev) {
-                if ([POINT_DOWN, POINT_MOVE, POINT_UP, POINT_CLICK, WHEEL].indexOf(ev.type) >= 0) {
+                if ([POINTER_DOWN, POINTER_MOVE, POINTER_UP, POINT_CLICK].indexOf(ev.type) >= 0) {
                     ev.preventDefault();
                     self.setMouseAttributes(device, ev);
+                } else if ([WHEEL].indexOf(ev.type) >= 0) {
+                    ev.preventDefault();
+                    self.setMouseAttributes(device, ev);
+                    self.setKeyboardAttributes(device, ev);
                 } else if ([KEY_DOWN, KEY_UP, KEY_PRESS].indexOf(ev.type) >= 0) {
                     self.setKeyboardAttributes(device, ev);
                 }
@@ -203,15 +214,15 @@ export default class Interaction {
             this.onWheel(device, state, ev);
         }), false);
 
-        this.container.addEventListener(POINT_DOWN, wrap((device, state, ev) => {
+        this.container.addEventListener(POINTER_DOWN, wrap((device, state, ev) => {
             this.onMouseDown(device, state, ev);
         }), false);
 
-        window.addEventListener(POINT_MOVE, wrap((device, state, ev) => {
+        window.addEventListener(POINTER_MOVE, wrap((device, state, ev) => {
             this.onMouseMove(device, state, ev);
         }), false);
 
-        window.addEventListener(POINT_UP, wrap((device, state, ev) => {
+        window.addEventListener(POINTER_UP, wrap((device, state, ev) => {
             this.onMouseUp(device, state, ev);
         }), false);        
 
@@ -225,6 +236,11 @@ export default class Interaction {
     }
 
     onMouseDown(device, state, ev) {
+        // ev.clientY === ev.y
+        // ev.layerY 相对于父容器
+        // ev.pageY 相对于页面
+        // ev.offsetY 相对于target的位置
+
         if (device.isMouseLeftButtonDown && device.spaceKey) {
             this.container.style.cursor = CURSOR_GRABBING;
         }
@@ -251,20 +267,17 @@ export default class Interaction {
     }
 
     onWheel(device, state, ev) {
-            // ev.clientY === ev.y
-            // ev.layerY 相对于父容器
-            // ev.pageY 相对于页面
-            // ev.offsetY 相对于target的位置
-
-            if (device.altKey) { // 缩放 alt+滚动
-                const info = this.getSourceInfo(ev); // 先获取位置
-                state.scaleValue = this.getScaleValue(device.wheelDeltaY); // 后缩放
-                const style = this.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
-                this.setStyle(style);
-            } else if (this.isMovable()) { // 平移
-                const rate = staticConfig.TRACKPAD_PAN_RATE;
-                this.getPanStyle(device.wheelDeltaX / rate, device.wheelDeltaY / rate);
-            }
+        // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
+        // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
+        if (device.ctrlKey) { // 缩放 alt/ctrl+滚动
+            const info = this.getSourceInfo(ev); // 先获取位置
+            state.scaleValue = this.getScaleValue(device.deltaY * TRACKPAD_PINCH_RATE); // 后缩放
+            const style = this.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
+            this.setStyle(style);
+        } else if (this.isMovable()) { // 平移
+            const rate = TRACKPAD_PAN_RATE;
+            this.getPanStyle(device.deltaX / rate, device.deltaY / rate);
+        }
     }
 
     onKeyDown(device, state, ev) {
@@ -277,11 +290,11 @@ export default class Interaction {
         this.container.style.cursor = CURSOR_DEFAULT;
     }
 
-    getScaleValue(wheelDeltaY) {
+    getScaleValue(deltaY) {
         const s = this.state;
-        s.wheelValue -= wheelDeltaY;
-        s.wheelValue = utils.range(s.wheelValue, staticConfig.MIN_WHEEL_VALUE, staticConfig.MAX_WHEEL_VALUE);
-        return s.wheelValue / staticConfig.WHEEL_SCALE_RATE;
+        s.wheelValue -= deltaY;
+        s.wheelValue = utils.range(s.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE);
+        return s.wheelValue / WHEEL_SCALE_RATE;
     } 
 
     isMovable(): boolean {
@@ -306,10 +319,10 @@ export default class Interaction {
 
     // 鼠标事件属性
     setMouseAttributes(device, ev) {
-        if (ev.type === POINT_UP) {
+        if (ev.type === POINTER_UP) {
             device.isMouseLeftButtonDown = false;
             device.mouseButtonCode = -1;
-        } else if (ev.type === POINT_DOWN) {
+        } else if (ev.type === POINTER_DOWN) {
             device.mouseButtonCode = ev.button;
 
             if (device.mouseButtonCode === 0) {
@@ -319,6 +332,8 @@ export default class Interaction {
 
         device.wheelDeltaX = ev.wheelDeltaX;
         device.wheelDeltaY = ev.wheelDeltaY;
+        device.deltaX = ev.deltaX;
+        device.deltaY = ev.deltaY;
         device.keyCode = ev.keyCode;
         device.clientX = ev.clientX;
         device.clientY = ev.clientY;
