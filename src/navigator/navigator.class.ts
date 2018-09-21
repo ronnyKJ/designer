@@ -58,6 +58,11 @@ export default class Navigator {
     }
 
     setVisibleScope () {
+        /*
+         * 导航器: 
+         * 缩略图相当于画布，可视范围框相当于画布的容器
+         * 当可视范围框超出缩略图时，限制在缩略图范围内
+         */
         const $con = this.$container;
         const $inter = this.$interaction;
         const $thumbnail = this.$thumbnail;
@@ -76,6 +81,7 @@ export default class Navigator {
         let scopeOffsetX = -interactionOffsetX / interactionWidth * thumbnailWidth;
         let scopeOffsetY = -interactionOffsetY / interactionHeight * thumbnailHeight;
         
+        // 以下对超出缩略图范围做限制
         if (scopeOffsetX + scopeWidth > thumbnailWidth) {
             scopeWidth = thumbnailWidth - scopeOffsetX;
         }
