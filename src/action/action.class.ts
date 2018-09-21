@@ -117,9 +117,9 @@ export default class Action {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
-            
+            this.onScale();
         } else { // 平移
-
+            this.onPan();
         }
     }
 
@@ -131,7 +131,15 @@ export default class Action {
 
     onKeyUp(device, state, ev) {
         this.$target.style.cursor = CURSOR_DEFAULT;
-    }   
+    }
+
+    onScale () {
+
+    }
+
+    onPan () {
+        
+    }
 
     // 键盘事件属性
     setKeyboardAttributes(device, ev) {
