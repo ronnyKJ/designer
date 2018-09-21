@@ -25,9 +25,11 @@ document.querySelector('#app').innerHTML = `
         </div> -->
     </div>
 </div>
+<div class="${appStyles.navigator}"></div>
 `;
 
 new Designer(document.querySelector(`.${appStyles.container}`), {
     canvasWidth: 200,
-    canvasHeight: 150,
+    canvasHeight: 100,
+    $navigator: document.querySelector(`.${appStyles.navigator}`)
 });

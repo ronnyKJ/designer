@@ -2,6 +2,7 @@
 
 import * as styles from './interaction.less';
 import utils from '../utils/utils';
+import Event from '../event/event';
 
 const POINTER_DOWN = 'mousedown';
 const POINTER_MOVE = 'mousemove';
@@ -33,8 +34,8 @@ const KEEP_INSIDE = 0.2;
 // origin 缩放的原点
 
 export default class Interaction {
-    private container: HTMLElement;
-    private interaction: HTMLElement;
+    public $interaction: HTMLElement;
+    private $container: HTMLElement;
     private movableWhenContained: boolean = true;
     private visibleSideWidth: number = 0;
     private visibleSideHeight: number = 0;
@@ -46,13 +47,13 @@ export default class Interaction {
     constructor(container, options) {
         options = options || {};
 
-        this.container = container;
+        this.$container = container;
         const rect = this.getContainerRect();
         this.visibleSideWidth = rect.width * KEEP_INSIDE;
         this.visibleSideHeight = rect.height * KEEP_INSIDE;
 
-        this.interaction = container.querySelector(`.${styles.interaction}`);
-        let style = this.interaction.style;
+        this.$interaction = container.querySelector(`.${styles.interaction}`);
+        let style = this.$interaction.style;
         style.width = options.canvasWidth + 'px';
         style.height = options.canvasHeight + 'px';
         style.left = (rect.width - options.canvasWidth) / 2 + 'px';
@@ -66,7 +67,7 @@ export default class Interaction {
         this.initAction();
     }
 
-    getPanStyle(offsetX: number, offsetY: number) {
+    setPanStyle(offsetX: number, offsetY: number) {
         const info = this.getEntityInfo();
 
         let x = info.left + offsetX;
@@ -82,7 +83,7 @@ export default class Interaction {
     getSourceInfo(ev: MouseEvent) {
         // 求出 鼠标在缩放之后的 interaction 中的位置
         // 映射到原始 container 中的位置
-        const interRect = this.interaction.getBoundingClientRect();
+        const interRect = this.$interaction.getBoundingClientRect();
         const tmpX = ev.pageX - interRect.left;
         const tmpY = ev.pageY - interRect.top;
 
@@ -97,7 +98,7 @@ export default class Interaction {
     }
 
     getEntityInfo() {
-        const i = this.interaction;
+        const i = this.$interaction;
         const left = parseInt(i.style.left) || 0;
         const top = parseInt(i.style.top) || 0;
         const width = i.clientWidth;
@@ -106,7 +107,7 @@ export default class Interaction {
     }
 
     getContainerRect() {
-        return this.container.getBoundingClientRect();
+        return this.$container.getBoundingClientRect();
     }
 
     // 相对于 base
@@ -141,12 +142,14 @@ export default class Interaction {
 
     setStyle(info) {
         // offset 是相对于 base
-        let style = this.interaction.style;
+        let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
         info.hasOwnProperty('height') && (style.height = `${info.height}px`);
         // 使用 translate 会变模糊
         info.hasOwnProperty('x') && (style.left = `${info.x}px`);
         info.hasOwnProperty('y') && (style.top = `${info.y}px`);
+
+        Event.trigger(Event.CANVAS_TRANSFORM, info);
     }
 
     keepVisible(x, y, entityWidth, entityHeight) {
@@ -210,11 +213,11 @@ export default class Interaction {
             }
         }
 
-        this.container.addEventListener(WHEEL, wrap((device, state, ev) => {
+        this.$container.addEventListener(WHEEL, wrap((device, state, ev) => {
             this.onWheel(device, state, ev);
         }), false);
 
-        this.container.addEventListener(POINTER_DOWN, wrap((device, state, ev) => {
+        this.$container.addEventListener(POINTER_DOWN, wrap((device, state, ev) => {
             this.onMouseDown(device, state, ev);
         }), false);
 
@@ -242,7 +245,7 @@ export default class Interaction {
         // ev.offsetY 相对于target的位置
 
         if (device.isMouseLeftButtonDown && device.spaceKey) {
-            this.container.style.cursor = CURSOR_GRABBING;
+            this.$container.style.cursor = CURSOR_GRABBING;
         }
 
         state.startX = device.clientX;
@@ -251,7 +254,7 @@ export default class Interaction {
 
     onMouseMove(device, state, ev) {
         if (device.isMouseLeftButtonDown && device.spaceKey && this.isMovable()) {
-            this.getPanStyle(device.clientX - state.startX, device.clientY - state.startY);
+            this.setPanStyle(device.clientX - state.startX, device.clientY - state.startY);
             state.startX = device.clientX;
             state.startY = device.clientY;
         }
@@ -260,9 +263,9 @@ export default class Interaction {
     onMouseUp(device, state, ev) {
         device.isMouseLeftButtonDown = false;
         if (device.spaceKey) {
-            this.container.style.cursor = CURSOR_GRAB;
+            this.$container.style.cursor = CURSOR_GRAB;
         } else {
-            this.container.style.cursor = CURSOR_DEFAULT;
+            this.$container.style.cursor = CURSOR_DEFAULT;
         }
     }
 
@@ -276,18 +279,18 @@ export default class Interaction {
             this.setStyle(style);
         } else if (this.isMovable()) { // 平移
             const rate = TRACKPAD_PAN_RATE;
-            this.getPanStyle(device.deltaX / rate, device.deltaY / rate);
+            this.setPanStyle(device.deltaX / rate, device.deltaY / rate);
         }
     }
 
     onKeyDown(device, state, ev) {
         if (device.spaceKey && !device.isMouseLeftButtonDown) {
-            this.container.style.cursor = CURSOR_GRAB;
+            this.$container.style.cursor = CURSOR_GRAB;
         }
     }
 
     onKeyUp(device, state, ev) {
-        this.container.style.cursor = CURSOR_DEFAULT;
+        this.$container.style.cursor = CURSOR_DEFAULT;
     }
 
     getScaleValue(deltaY) {
