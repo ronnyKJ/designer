@@ -31,15 +31,17 @@ export default class Navigator {
         this.setVisibleScope();
         Event.on(Event.CANVAS_TRANSFORM, () => {
             this.setVisibleScope();
-        });        
+        });
+
+        this.panScope();
     }
 
     containThumbnail () {
         const rect = this.$navigator.getBoundingClientRect();
         const nw = rect.width;
         const nh = rect.height;
-        const tw = this.$interaction.clientWidth;
-        const th = this.$interaction.clientHeight;
+        const tw = this.$interaction.offsetWidth;
+        const th = this.$interaction.offsetHeight;
 
         let style = this.$thumbnail.style;
         if (nw / nh > tw / th) {
@@ -67,14 +69,14 @@ export default class Navigator {
         const $inter = this.$interaction;
         const $thumbnail = this.$thumbnail;
 
-        const containerWidth = $con.clientWidth;
-        const containerHeight = $con.clientHeight;
-        const interactionWidth = $inter.clientWidth;
-        const interactionHeight = $inter.clientHeight;
+        const containerWidth = $con.offsetWidth;
+        const containerHeight = $con.offsetHeight;
+        const interactionWidth = $inter.offsetWidth;
+        const interactionHeight = $inter.offsetHeight;
         const interactionOffsetX = $inter.offsetLeft;
         const interactionOffsetY = $inter.offsetTop;
-        const thumbnailWidth = $thumbnail.clientWidth;
-        const thumbnailHeight = $thumbnail.clientHeight;
+        const thumbnailWidth = $thumbnail.offsetWidth;
+        const thumbnailHeight = $thumbnail.offsetHeight;
 
         let scopeWidth = containerWidth / interactionWidth * thumbnailWidth;
         let scopeHeight = containerHeight / interactionHeight * thumbnailHeight;
@@ -109,5 +111,55 @@ export default class Navigator {
 
     setThumnnail () {
 
+    }
+
+    panScope () {
+        const POINTER_DOWN = 'mousedown';
+        const POINTER_MOVE = 'mousemove';
+        const POINTER_UP = 'mouseup';
+        const CURSOR_GRAB = '-webkit-grab';
+        const CURSOR_GRABBING = '-webkit-grabbing';
+        
+        let isMouseDown = false;
+        let startX = 0;
+        let startY = 0;
+        this.$scope.addEventListener(POINTER_DOWN, (ev) => {
+            isMouseDown = true;
+            startX = ev.pageX;
+            startY = ev.pageY;
+        }, false);
+
+        window.addEventListener(POINTER_MOVE, (ev) => {
+            if (isMouseDown) {
+                const deltaX = ev.pageX - startX;
+                const deltaY = ev.pageY - startY;
+
+                const thumbnailWidth = this.$thumbnail.offsetWidth;
+                const thumbnailHeight = this.$thumbnail.offsetHeight;
+
+                let tmpX = -deltaX / thumbnailWidth * this.$interaction.offsetWidth;
+                let tmpY = -deltaY / thumbnailHeight * this.$interaction.offsetHeight;
+
+                if (thumbnailWidth === this.$scope.offsetWidth) {
+                    tmpX = 0;
+                }
+
+                if (thumbnailHeight === this.$scope.offsetHeight) {
+                    tmpY = 0;
+                }
+
+                Event.trigger(Event.SCOPE_PAN, {
+                    deltaX: tmpX,
+                    deltaY: tmpY
+                });
+
+                startX = ev.pageX;
+                startY = ev.pageY;
+            }
+        }, false);
+
+        window.addEventListener(POINTER_UP, (ev) => {
+            isMouseDown = false;
+        }, false);        
     }
 }

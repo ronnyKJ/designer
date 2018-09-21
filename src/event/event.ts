@@ -3,6 +3,7 @@
 class Event {
     private events;
     public CANVAS_TRANSFORM = 'canvas_transform';
+    public SCOPE_PAN = 'scope_pan';
 
     constructor () {
         this.events = {};

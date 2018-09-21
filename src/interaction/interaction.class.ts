@@ -65,6 +65,10 @@ export default class Interaction {
         this.movableWhenContained = options.movableWhenContained || true;
 
         this.initAction();
+
+        Event.on(Event.SCOPE_PAN, (delta) => {
+            this.setPanStyle(delta.deltaX, delta.deltaY);
+        });
     }
 
     setPanStyle(offsetX: number, offsetY: number) {
@@ -101,8 +105,8 @@ export default class Interaction {
         const i = this.$interaction;
         const left = parseInt(i.style.left) || 0;
         const top = parseInt(i.style.top) || 0;
-        const width = i.clientWidth;
-        const height = i.clientHeight;
+        const width = i.offsetWidth;
+        const height = i.offsetHeight;
         return { top, left, width, height };
     }
 
@@ -239,7 +243,7 @@ export default class Interaction {
     }
 
     onMouseDown(device, state, ev) {
-        // ev.clientY === ev.y
+        // ev.pageY === ev.y
         // ev.layerY 相对于父容器
         // ev.pageY 相对于页面
         // ev.offsetY 相对于target的位置
@@ -248,15 +252,15 @@ export default class Interaction {
             this.$container.style.cursor = CURSOR_GRABBING;
         }
 
-        state.startX = device.clientX;
-        state.startY = device.clientY;
+        state.startX = device.pageX;
+        state.startY = device.pageY;
     }
 
     onMouseMove(device, state, ev) {
         if (device.isMouseLeftButtonDown && device.spaceKey && this.isMovable()) {
-            this.setPanStyle(device.clientX - state.startX, device.clientY - state.startY);
-            state.startX = device.clientX;
-            state.startY = device.clientY;
+            this.setPanStyle(device.pageX - state.startX, device.pageY - state.startY);
+            state.startX = device.pageX;
+            state.startY = device.pageY;
         }
     }
 
@@ -338,8 +342,8 @@ export default class Interaction {
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
         device.keyCode = ev.keyCode;
-        device.clientX = ev.clientX;
-        device.clientY = ev.clientY;
+        device.pageX = ev.pageX;
+        device.pageY = ev.pageY;
         device.pageX = ev.pageX;
         device.pageY = ev.pageY;
     }    
