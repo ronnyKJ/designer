@@ -1,3 +1,5 @@
+import utils from '../utils/utils';
+
 const POINTER_DOWN = 'mousedown';
 const POINTER_MOVE = 'mousemove';
 const POINTER_UP = 'mouseup';
@@ -11,6 +13,10 @@ const CURSOR_GRAB = '-webkit-grab';
 const CURSOR_GRABBING = '-webkit-grabbing';
 const TRACKPAD_PAN_RATE = -1;
 const TRACKPAD_PINCH_RATE = 12;
+const MAX_WHEEL_VALUE = 10000;
+const INIT_WHEEL_VALUE = 1000;
+const MIN_WHEEL_VALUE = 100;
+const WHEEL_SCALE_RATE = 1000;
 
 export default class Action {
     public static POINTER_DOWN = POINTER_DOWN;
@@ -67,9 +73,9 @@ export default class Action {
             startY: 0,
             deltaX: 0,
             deltaY: 0,
-            wheelValue: config.initWheelValue || 1000,
+            wheelValue: INIT_WHEEL_VALUE,
             scaleValue: config.initScaleValue || 1,
-            scaleDelta: 0,
+            beforeScaleValue: config.initScaleValue || 1,
             dragging: false
         };
 
@@ -167,7 +173,9 @@ export default class Action {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
-            state.scaleDelta = device.deltaY * TRACKPAD_PINCH_RATE;
+            state.beforeScaleValue = state.scaleValue;
+            state.wheelValue -= device.deltaY * TRACKPAD_PINCH_RATE;
+            state.scaleValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE) / WHEEL_SCALE_RATE;
             this.onScale(device, state, ev);
         } else { // 平移
             const rate = TRACKPAD_PAN_RATE;

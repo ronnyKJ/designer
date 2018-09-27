@@ -5,11 +5,7 @@ import utils from '../utils/utils';
 import Event from '../event/event';
 import Action from '../action/action.class';
 
-const MAX_WHEEL_VALUE = 10000;
-const INIT_WHEEL_VALUE = 1000;
-const MIN_WHEEL_VALUE = 100;
 const INIT_SCALE_VALUE = 1;
-const WHEEL_SCALE_RATE = 1000;
 const KEEP_INSIDE = 0.2;
 
 
@@ -80,8 +76,8 @@ export default class Interaction {
         const tmpX = ev.pageX - interRect.left;
         const tmpY = ev.pageY - interRect.top;
 
-        const originX = tmpX / this.action.state.scaleValue;
-        const originY = tmpY / this.action.state.scaleValue;
+        const originX = tmpX / this.action.state.beforeScaleValue;
+        const originY = tmpY / this.action.state.beforeScaleValue;
 
         const containerRect = this.getContainerRect();
         const offsetX = ev.pageX - containerRect.left - originX;
@@ -169,7 +165,6 @@ export default class Interaction {
             $target: this.$interaction,
             $wheelTarget: this.$container,
             initScaleValue: INIT_SCALE_VALUE,
-            initWheelValue: INIT_WHEEL_VALUE,
             onPointerDown (device, state, ev) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
@@ -185,7 +180,6 @@ export default class Interaction {
             },
             onScale (device, state, ev) {
                 const info = self.getSourceInfo(ev); // 先获取位置
-                state.scaleValue = self.getScaleValue(); // 后缩放
                 const style = self.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
                 self.setStyle(style);
             },
@@ -205,13 +199,6 @@ export default class Interaction {
             }
         });
     }
-
-    getScaleValue() {
-        const state = this.action.state;
-        state.wheelValue -= state.scaleDelta;
-        state.wheelValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE);
-        return state.wheelValue / WHEEL_SCALE_RATE;
-    } 
 
     isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
