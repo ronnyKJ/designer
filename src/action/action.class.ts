@@ -9,6 +9,8 @@ const KEY_PRESS = 'keypress';
 const CURSOR_DEFAULT = 'default';
 const CURSOR_GRAB = '-webkit-grab';
 const CURSOR_GRABBING = '-webkit-grabbing';
+const TRACKPAD_PAN_RATE = -1;
+const TRACKPAD_PINCH_RATE = 12;
 
 export default class Action {
     public static POINTER_DOWN = POINTER_DOWN;
@@ -66,7 +68,9 @@ export default class Action {
             deltaX: 0,
             deltaY: 0,
             wheelValue: config.initWheelValue || 1000,
-            scaleValue: config.initScaleValue || 1
+            scaleValue: config.initScaleValue || 1,
+            scaleDelta: 0,
+            dragging: false
         };
 
         let self = this;
@@ -138,14 +142,14 @@ export default class Action {
     }
 
     onPointerMove(device, state, ev) {
-        if (this.config.canPointerMove && !this.config.canPointerMove(device, state, ev)) {
-            return;
-        }
-
         state.deltaX = device.pageX - state.startX;
         state.deltaY = device.pageY - state.startY;
 
         this.config.onPointerMove && this.config.onPointerMove(device, state, ev);
+        if (device.isMouseLeftButtonDown) {
+            state.dragging = true;
+            this.config.onPan && this.config.onPan(device, state, ev);
+        }
 
         state.startX = device.pageX;
         state.startY = device.pageY;
@@ -163,8 +167,13 @@ export default class Action {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
+            state.scaleDelta = device.deltaY * TRACKPAD_PINCH_RATE;
             this.onScale(device, state, ev);
         } else { // 平移
+            const rate = TRACKPAD_PAN_RATE;
+            state.deltaX = device.deltaX / rate;
+            state.deltaY = device.deltaY / rate;
+            state.dragging = false;
             this.onPan(device, state, ev);
         }
 

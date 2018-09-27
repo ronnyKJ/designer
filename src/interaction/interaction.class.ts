@@ -8,10 +8,8 @@ import Action from '../action/action.class';
 const MAX_WHEEL_VALUE = 10000;
 const INIT_WHEEL_VALUE = 1000;
 const MIN_WHEEL_VALUE = 100;
-const INIT_SCALE = 1;
+const INIT_SCALE_VALUE = 1;
 const WHEEL_SCALE_RATE = 1000;
-const TRACKPAD_PAN_RATE = -1;
-const TRACKPAD_PINCH_RATE = 12;
 const KEEP_INSIDE = 0.2;
 
 
@@ -19,7 +17,6 @@ const KEEP_INSIDE = 0.2;
 // base 初始化时的状态
 // source 每个状态对应的原始大小的状态，主要信息是 offset origin
 // entity 当前实时的状态
-// state 属性集合
 // origin 缩放的原点
 
 export default class Interaction {
@@ -171,19 +168,14 @@ export default class Interaction {
         this.action = new Action({
             $target: this.$interaction,
             $wheelTarget: this.$container,
-            initScaleValue: 1,
-            initWheelValue: 1000,
+            initScaleValue: INIT_SCALE_VALUE,
+            initWheelValue: INIT_WHEEL_VALUE,
             onPointerDown (device, state, ev) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
                 }
             },
-            onPointerMove (device, state, ev) {
-                if (device.isMouseLeftButtonDown && device.spaceKey && self.isMovable()) {
-                    self.setPanStyle(state.deltaX, state.deltaY);
-                }
-            },
-            onPointerUp(device, state, ev) {
+            onPointerUp (device, state, ev) {
                 device.isMouseLeftButtonDown = false;
                 if (device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
@@ -191,20 +183,19 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onWheel(device, state, ev) {
-                // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
-                // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
-                if (device.ctrlKey) { // 缩放 alt/ctrl+滚动
-                    const info = self.getSourceInfo(ev); // 先获取位置
-                    state.scaleValue = self.getScaleValue(device.deltaY * TRACKPAD_PINCH_RATE); // 后缩放
-                    const style = self.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
-                    self.setStyle(style);
-                } else if (self.isMovable()) { // 平移
-                    const rate = TRACKPAD_PAN_RATE;
-                    self.setPanStyle(device.deltaX / rate, device.deltaY / rate);
+            onScale (device, state, ev) {
+                const info = self.getSourceInfo(ev); // 先获取位置
+                state.scaleValue = self.getScaleValue(); // 后缩放
+                const style = self.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
+                self.setStyle(style);
+            },
+            onPan (device, state, ev) {
+                const movable = self.isMovable();
+                if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
+                    self.setPanStyle(state.deltaX, state.deltaY);
                 }
             },
-            onKeyDown(device, state, ev) {
+            onKeyDown (device, state, ev) {
                 if (device.spaceKey && !device.isMouseLeftButtonDown) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
                 }
@@ -215,11 +206,11 @@ export default class Interaction {
         });
     }
 
-    getScaleValue(deltaY) {
-        const s = this.action.state;
-        s.wheelValue -= deltaY;
-        s.wheelValue = utils.range(s.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE);
-        return s.wheelValue / WHEEL_SCALE_RATE;
+    getScaleValue() {
+        const state = this.action.state;
+        state.wheelValue -= state.scaleDelta;
+        state.wheelValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE);
+        return state.wheelValue / WHEEL_SCALE_RATE;
     } 
 
     isMovable(): boolean {
