@@ -10,6 +10,7 @@ export default class Navigator {
     private $interaction;
     private $thumbnail;
     private $scope;
+    private $slider;
     
     constructor ($dom, config) {
         $dom.innerHTML = `
@@ -18,7 +19,7 @@ export default class Navigator {
                     <div class="${styles.scope}"></div>                
                 </div>
                 <div class="${styles.slider}">
-                    <input type="range" />
+                    <input type="range" max="10" min="0.1" defaultValue="1" step="0.1" />
                 </div>
             </div>
         `;
@@ -28,6 +29,7 @@ export default class Navigator {
         this.$navigator = $dom.querySelector(`.${styles.navigator}`);
         this.$thumbnail = $dom.querySelector(`.${styles.thumbnail}`);
         this.$scope = $dom.querySelector(`.${styles.scope}`);
+        this.$slider = $dom.querySelector(`.${styles.slider} input`);
 
         this.containThumbnail();
         this.setThumnnail();
@@ -38,6 +40,10 @@ export default class Navigator {
         });
 
         this.panScope();
+
+        this.$slider.addEventListener('input', (ev) => {
+            Event.trigger(Event.SCOPE_SCALE, this.$slider.value);            
+        }, false);
     }
 
     containThumbnail () {

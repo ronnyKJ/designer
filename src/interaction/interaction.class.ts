@@ -3,18 +3,7 @@
 import * as styles from './interaction.less';
 import utils from '../utils/utils';
 import Event from '../event/event';
-
-const POINTER_DOWN = 'mousedown';
-const POINTER_MOVE = 'mousemove';
-const POINTER_UP = 'mouseup';
-const POINT_CLICK = 'click';
-const WHEEL = 'wheel';
-const KEY_DOWN = 'keydown';
-const KEY_UP = 'keyup';
-const KEY_PRESS = 'keypress';
-const CURSOR_DEFAULT = 'default';
-const CURSOR_GRAB = '-webkit-grab';
-const CURSOR_GRABBING = '-webkit-grabbing';
+import Action from '../action/action.class';
 
 const MAX_WHEEL_VALUE = 10000;
 const INIT_WHEEL_VALUE = 1000;
@@ -39,10 +28,9 @@ export default class Interaction {
     private movableWhenContained: boolean = true;
     private visibleSideWidth: number = 0;
     private visibleSideHeight: number = 0;
-    private state;
-    private device;
     private canvasOriginWidth;
     private canvasOriginHeight;
+    private action;
 
     constructor(container, options) {
         options = options || {};
@@ -69,6 +57,10 @@ export default class Interaction {
         Event.on(Event.SCOPE_PAN, (delta) => {
             this.setPanStyle(delta.deltaX, delta.deltaY);
         });
+
+        Event.on(Event.SCOPE_SCALE, (delta) => {
+            this.setPanStyle(delta.deltaX, delta.deltaY);
+        });
     }
 
     setPanStyle(offsetX: number, offsetY: number) {
@@ -91,8 +83,8 @@ export default class Interaction {
         const tmpX = ev.pageX - interRect.left;
         const tmpY = ev.pageY - interRect.top;
 
-        const originX = tmpX / this.state.scaleValue;
-        const originY = tmpY / this.state.scaleValue;
+        const originX = tmpX / this.action.state.scaleValue;
+        const originY = tmpY / this.action.state.scaleValue;
 
         const containerRect = this.getContainerRect();
         const offsetX = ev.pageX - containerRect.left - originX;
@@ -172,146 +164,59 @@ export default class Interaction {
         (y > tmp4) && (y = tmp4);
 
         return { x, y };
-    }
+    } 
 
     initAction() {
-
-        let device = this.device = {
-            altKey: false,
-            metaKey: false,
-            ctrlKey: false,
-            spaceKey: false,
-            isMouseLeftButtonDown: false,
-            mouseButtonCode: -1, // -1 没有点击， 0左键 1中键 2右键 需要确认下兼容性问题
-            wheelDeltaX: 0,
-            wheelDeltaY: 0,
-            keyCode: -1,
-            clientX: 0,
-            clientY: 0,
-            pageX: 0,
-            pageY: 0,
-        };
-
-        let state = this.state = {
-            startX: 0,
-            startY: 0,
-            wheelValue: INIT_WHEEL_VALUE,
-            scaleValue: INIT_SCALE
-        };
-
-        let self = this;
-        function wrap (callback) {
-            return function (ev) {
-                if ([POINTER_DOWN, POINTER_MOVE, POINTER_UP, POINT_CLICK].indexOf(ev.type) >= 0) {
-                    ev.preventDefault();
-                    self.setMouseAttributes(device, ev);
-                } else if ([WHEEL].indexOf(ev.type) >= 0) {
-                    ev.preventDefault();
-                    self.setMouseAttributes(device, ev);
-                    self.setKeyboardAttributes(device, ev);
-                } else if ([KEY_DOWN, KEY_UP, KEY_PRESS].indexOf(ev.type) >= 0) {
-                    self.setKeyboardAttributes(device, ev);
+        const self = this;
+        this.action = new Action({
+            $target: this.$interaction,
+            $wheelTarget: this.$container,
+            initScaleValue: 1,
+            initWheelValue: 1000,
+            onPointerDown (device, state, ev) {
+                if (device.isMouseLeftButtonDown && device.spaceKey) {
+                    self.$interaction.style.cursor = Action.CURSOR_GRABBING;
                 }
-                device.altKey = ev.altKey;
-                callback && callback(device, state, ev);
+            },
+            onPointerMove (device, state, ev) {
+                if (device.isMouseLeftButtonDown && device.spaceKey && self.isMovable()) {
+                    self.setPanStyle(state.deltaX, state.deltaY);
+                }
+            },
+            onPointerUp(device, state, ev) {
+                device.isMouseLeftButtonDown = false;
+                if (device.spaceKey) {
+                    self.$interaction.style.cursor = Action.CURSOR_GRAB;
+                } else {
+                    self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
+                }
+            },
+            onWheel(device, state, ev) {
+                // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
+                // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
+                if (device.ctrlKey) { // 缩放 alt/ctrl+滚动
+                    const info = self.getSourceInfo(ev); // 先获取位置
+                    state.scaleValue = self.getScaleValue(device.deltaY * TRACKPAD_PINCH_RATE); // 后缩放
+                    const style = self.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
+                    self.setStyle(style);
+                } else if (self.isMovable()) { // 平移
+                    const rate = TRACKPAD_PAN_RATE;
+                    self.setPanStyle(device.deltaX / rate, device.deltaY / rate);
+                }
+            },
+            onKeyDown(device, state, ev) {
+                if (device.spaceKey && !device.isMouseLeftButtonDown) {
+                    self.$interaction.style.cursor = Action.CURSOR_GRAB;
+                }
+            },
+            onKeyUp(device, state, ev) {
+                self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
             }
-        }
-
-
-        const pointerMoveHandler = wrap((device, state, ev) => {
-            this.onPointerMove(device, state, ev);
         });
-        const pointerUpHandler = wrap((device, state, ev) => {
-            this.onPointerUp(device, state, ev);
-
-            window.removeEventListener(POINTER_MOVE, pointerMoveHandler);
-            window.removeEventListener(POINTER_UP, pointerMoveHandler);
-        });
-
-        const pointerDownHandler = wrap((device, state, ev) => {
-            this.onPointerDown(device, state, ev);
-
-            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
-            window.addEventListener(POINTER_UP, pointerUpHandler, false);
-        });
-        this.$container.addEventListener(POINTER_DOWN, pointerDownHandler, false);        
-
-
-
-        
-        const keyDownHandler = wrap((device, state, ev) => {            
-            this.onKeyDown(device, state, ev);
-        });
-        window.addEventListener(KEY_DOWN, keyDownHandler, false);
-
-        const keyUpHandler = wrap((device, state, ev) => {
-            this.onKeyUp(device, state, ev);
-        });
-        window.addEventListener(KEY_UP, keyUpHandler, false);
-
-        const wheelHandler = wrap((device, state, ev) => {
-            this.onWheel(device, state, ev);
-        });
-        this.$container.addEventListener(WHEEL, wheelHandler, false);
-    }
-
-    onPointerDown(device, state, ev) {
-        // ev.pageY === ev.y
-        // ev.layerY 相对于父容器
-        // ev.pageY 相对于页面
-        // ev.offsetY 相对于target的位置
-
-        if (device.isMouseLeftButtonDown && device.spaceKey) {
-            this.$container.style.cursor = CURSOR_GRABBING;
-        }
-
-        state.startX = device.pageX;
-        state.startY = device.pageY;
-    }
-
-    onPointerMove(device, state, ev) {
-        if (device.isMouseLeftButtonDown && device.spaceKey && this.isMovable()) {
-            this.setPanStyle(device.pageX - state.startX, device.pageY - state.startY);
-            state.startX = device.pageX;
-            state.startY = device.pageY;
-        }
-    }
-
-    onPointerUp(device, state, ev) {
-        device.isMouseLeftButtonDown = false;
-        if (device.spaceKey) {
-            this.$container.style.cursor = CURSOR_GRAB;
-        } else {
-            this.$container.style.cursor = CURSOR_DEFAULT;
-        }
-    }
-
-    onWheel(device, state, ev) {
-        // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
-        // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
-        if (device.ctrlKey) { // 缩放 alt/ctrl+滚动
-            const info = this.getSourceInfo(ev); // 先获取位置
-            state.scaleValue = this.getScaleValue(device.deltaY * TRACKPAD_PINCH_RATE); // 后缩放
-            const style = this.getTransformStyle(info.offsetX, info.offsetY, info.originX, info.originY, state.scaleValue); // 变形
-            this.setStyle(style);
-        } else if (this.isMovable()) { // 平移
-            const rate = TRACKPAD_PAN_RATE;
-            this.setPanStyle(device.deltaX / rate, device.deltaY / rate);
-        }
-    }
-
-    onKeyDown(device, state, ev) {
-        if (device.spaceKey && !device.isMouseLeftButtonDown) {
-            this.$container.style.cursor = CURSOR_GRAB;
-        }
-    }
-
-    onKeyUp(device, state, ev) {
-        this.$container.style.cursor = CURSOR_DEFAULT;
     }
 
     getScaleValue(deltaY) {
-        const s = this.state;
+        const s = this.action.state;
         s.wheelValue -= deltaY;
         s.wheelValue = utils.range(s.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE);
         return s.wheelValue / WHEEL_SCALE_RATE;
@@ -319,43 +224,7 @@ export default class Interaction {
 
     isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
-        return !(this.movableWhenContained === false && this.state.scaleValue <= 1);
+        return !(this.movableWhenContained === false && this.action.state.scaleValue <= 1);
     }
-
-    // 键盘事件属性
-    setKeyboardAttributes(device, ev) {
-        device.keyCode = ev.keyCode;
-
-        device.altKey = ev.altKey;
-        device.metaKey = ev.metaKey;
-        device.ctrlKey = ev.ctrlKey;
-        
-        if (ev.type === KEY_DOWN) {
-            device.spaceKey = ev.keyCode === 32;
-        } else if (ev.type === KEY_UP) {
-            device.spaceKey = false;
-        }
-    }
-
-    // 鼠标事件属性
-    setMouseAttributes(device, ev) {
-        if (ev.type === POINTER_UP) {
-            device.isMouseLeftButtonDown = false;
-            device.mouseButtonCode = -1;
-        } else if (ev.type === POINTER_DOWN) {
-            device.mouseButtonCode = ev.button;
-
-            if (device.mouseButtonCode === 0) {
-                device.isMouseLeftButtonDown = true;
-            }
-        }
-
-        device.wheelDeltaX = ev.wheelDeltaX;
-        device.wheelDeltaY = ev.wheelDeltaY;
-        device.deltaX = ev.deltaX;
-        device.deltaY = ev.deltaY;
-        device.keyCode = ev.keyCode;
-        device.pageX = ev.pageX;
-        device.pageY = ev.pageY;
-    }    
+ 
 }

@@ -24,19 +24,25 @@ export default class Action {
     public static CURSOR_GRABBING = CURSOR_GRABBING;
 
     private $target;
+    private $wheelTarget;
     private state;
     private device;
     private config;
     
     constructor (config) {
         this.config = config || {};
+        this.config.cursor = this.config.cursor || {}; 
 
         if (!config.$target) {
             return;
         }
 
         this.$target = config.$target;
-        this.$target.style.cursor = config.cursor.pointerOver;
+        this.$wheelTarget = config.$wheelTarget || this.$target;
+        const pointerOverCursor = this.config.cursor.pointerOver;
+        if (pointerOverCursor) {
+            this.$target.style.cursor = pointerOverCursor;
+        }
 
         let device = this.device = {
             altKey: false,
@@ -59,7 +65,7 @@ export default class Action {
             startY: 0,
             deltaX: 0,
             deltaY: 0,
-            wheelValue: config.initWheelValue || 0,
+            wheelValue: config.initWheelValue || 1000,
             scaleValue: config.initScaleValue || 1
         };
 
@@ -80,8 +86,6 @@ export default class Action {
                 callback && callback(device, state, ev);
             }
         }
-
-        
 
         const pointerMoveHandler = wrap((device, state, ev) => {
             this.onPointerMove(device, state, ev);
@@ -113,7 +117,7 @@ export default class Action {
         const wheelHandler = wrap((device, state, ev) => {
             this.onWheel(device, state, ev);
         });
-        this.$target.addEventListener(WHEEL, wheelHandler, false);
+        this.$wheelTarget.addEventListener(WHEEL, wheelHandler, false);
     }
 
     onPointerDown(device, state, ev) {
@@ -122,8 +126,9 @@ export default class Action {
         // ev.pageY 相对于页面
         // ev.offsetY 相对于target的位置
 
-        if (this.config.cursor.pointerDown && device.isMouseLeftButtonDown) {
-            this.$target.style.cursor = this.config.cursor.pointerDown;
+        const pointerDownCursor = this.config.cursor.pointerDown;
+        if (pointerDownCursor && device.isMouseLeftButtonDown) {
+            this.$target.style.cursor = pointerDownCursor;
         }
 
         state.startX = device.pageX;
@@ -133,7 +138,7 @@ export default class Action {
     }
 
     onPointerMove(device, state, ev) {
-        if (this.config.canMouseMove && !this.config.canMouseMove()) {
+        if (this.config.canPointerMove && !this.config.canPointerMove(device, state, ev)) {
             return;
         }
 
@@ -147,8 +152,9 @@ export default class Action {
     }
 
     onPointerUp(device, state, ev) {
-        if (this.config.cursor.pointerUp && !device.isMouseLeftButtonDown) {
-            this.$target.style.cursor = this.config.cursor.pointerUp;
+        const pointerUpCursor = this.config.cursor.pointerUp;
+        if (pointerUpCursor && !device.isMouseLeftButtonDown) {
+            this.$target.style.cursor = pointerUpCursor;
         }        
         this.config.onPointerUp && this.config.onPointerUp(device, state, ev);
     }
@@ -170,8 +176,6 @@ export default class Action {
     }
 
     onKeyUp(device, state, ev) {
-        this.$target.style.cursor = CURSOR_DEFAULT;
-
         this.config.onKeyUp && this.config.onKeyUp(device, state, ev);
     }
 
