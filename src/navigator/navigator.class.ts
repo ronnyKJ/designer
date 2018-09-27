@@ -1,6 +1,7 @@
 'use strict'
 
 import * as styles from './navigator.less';
+import Action from '../action/action.class';
 import Event from '../event/event';
 
 export default class Navigator {
@@ -15,7 +16,10 @@ export default class Navigator {
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
                     <div class="${styles.scope}"></div>                
-                </div>   
+                </div>
+                <div class="${styles.slider}">
+                    <input type="range" />
+                </div>
             </div>
         `;
 
@@ -114,52 +118,37 @@ export default class Navigator {
     }
 
     panScope () {
-        const POINTER_DOWN = 'mousedown';
-        const POINTER_MOVE = 'mousemove';
-        const POINTER_UP = 'mouseup';
-        const CURSOR_GRAB = '-webkit-grab';
-        const CURSOR_GRABBING = '-webkit-grabbing';
-        
-        let isMouseDown = false;
-        let startX = 0;
-        let startY = 0;
-        this.$scope.addEventListener(POINTER_DOWN, (ev) => {
-            isMouseDown = true;
-            startX = ev.pageX;
-            startY = ev.pageY;
-        }, false);
+        const self = this;
+        new Action({
+            $target: this.$scope,
+            onPointerMove (device, state, ev) {
+                if (device.isMouseLeftButtonDown) {
+                    const thumbnailWidth = self.$thumbnail.offsetWidth;
+                    const thumbnailHeight = self.$thumbnail.offsetHeight;
 
-        window.addEventListener(POINTER_MOVE, (ev) => {
-            if (isMouseDown) {
-                const deltaX = ev.pageX - startX;
-                const deltaY = ev.pageY - startY;
+                    let tmpX = -state.deltaX / thumbnailWidth * self.$interaction.offsetWidth;
+                    let tmpY = -state.deltaY / thumbnailHeight * self.$interaction.offsetHeight;
 
-                const thumbnailWidth = this.$thumbnail.offsetWidth;
-                const thumbnailHeight = this.$thumbnail.offsetHeight;
+                    if (thumbnailWidth === self.$scope.offsetWidth) {
+                        tmpX = 0;
+                    }
 
-                let tmpX = -deltaX / thumbnailWidth * this.$interaction.offsetWidth;
-                let tmpY = -deltaY / thumbnailHeight * this.$interaction.offsetHeight;
+                    if (thumbnailHeight === self.$scope.offsetHeight) {
+                        tmpY = 0;
+                    }
 
-                if (thumbnailWidth === this.$scope.offsetWidth) {
-                    tmpX = 0;
+                    Event.trigger(Event.SCOPE_PAN, {
+                        deltaX: tmpX,
+                        deltaY: tmpY
+                    });                    
                 }
-
-                if (thumbnailHeight === this.$scope.offsetHeight) {
-                    tmpY = 0;
-                }
-
-                Event.trigger(Event.SCOPE_PAN, {
-                    deltaX: tmpX,
-                    deltaY: tmpY
-                });
-
-                startX = ev.pageX;
-                startY = ev.pageY;
+            },
+            cursor: {
+                pointerOver: Action.CURSOR_GRAB,
+                pointerDown: Action.CURSOR_GRABBING,
+                pointerUp: Action.CURSOR_GRAB
             }
-        }, false);
+        });
 
-        window.addEventListener(POINTER_UP, (ev) => {
-            isMouseDown = false;
-        }, false);        
     }
 }

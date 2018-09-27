@@ -197,7 +197,7 @@ export default class Interaction {
             startY: 0,
             wheelValue: INIT_WHEEL_VALUE,
             scaleValue: INIT_SCALE
-        };       
+        };
 
         let self = this;
         function wrap (callback) {
@@ -217,32 +217,45 @@ export default class Interaction {
             }
         }
 
-        this.$container.addEventListener(WHEEL, wrap((device, state, ev) => {
-            this.onWheel(device, state, ev);
-        }), false);
 
-        this.$container.addEventListener(POINTER_DOWN, wrap((device, state, ev) => {
-            this.onMouseDown(device, state, ev);
-        }), false);
+        const pointerMoveHandler = wrap((device, state, ev) => {
+            this.onPointerMove(device, state, ev);
+        });
+        const pointerUpHandler = wrap((device, state, ev) => {
+            this.onPointerUp(device, state, ev);
 
-        window.addEventListener(POINTER_MOVE, wrap((device, state, ev) => {
-            this.onMouseMove(device, state, ev);
-        }), false);
+            window.removeEventListener(POINTER_MOVE, pointerMoveHandler);
+            window.removeEventListener(POINTER_UP, pointerMoveHandler);
+        });
 
-        window.addEventListener(POINTER_UP, wrap((device, state, ev) => {
-            this.onMouseUp(device, state, ev);
-        }), false);        
+        const pointerDownHandler = wrap((device, state, ev) => {
+            this.onPointerDown(device, state, ev);
 
-        window.addEventListener(KEY_DOWN, wrap((device, state, ev) => {            
+            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
+            window.addEventListener(POINTER_UP, pointerUpHandler, false);
+        });
+        this.$container.addEventListener(POINTER_DOWN, pointerDownHandler, false);        
+
+
+
+        
+        const keyDownHandler = wrap((device, state, ev) => {            
             this.onKeyDown(device, state, ev);
-        }), false);
+        });
+        window.addEventListener(KEY_DOWN, keyDownHandler, false);
 
-        window.addEventListener(KEY_UP, wrap((device, state, ev) => {
+        const keyUpHandler = wrap((device, state, ev) => {
             this.onKeyUp(device, state, ev);
-        }), false);
+        });
+        window.addEventListener(KEY_UP, keyUpHandler, false);
+
+        const wheelHandler = wrap((device, state, ev) => {
+            this.onWheel(device, state, ev);
+        });
+        this.$container.addEventListener(WHEEL, wheelHandler, false);
     }
 
-    onMouseDown(device, state, ev) {
+    onPointerDown(device, state, ev) {
         // ev.pageY === ev.y
         // ev.layerY 相对于父容器
         // ev.pageY 相对于页面
@@ -256,7 +269,7 @@ export default class Interaction {
         state.startY = device.pageY;
     }
 
-    onMouseMove(device, state, ev) {
+    onPointerMove(device, state, ev) {
         if (device.isMouseLeftButtonDown && device.spaceKey && this.isMovable()) {
             this.setPanStyle(device.pageX - state.startX, device.pageY - state.startY);
             state.startX = device.pageX;
@@ -264,7 +277,7 @@ export default class Interaction {
         }
     }
 
-    onMouseUp(device, state, ev) {
+    onPointerUp(device, state, ev) {
         device.isMouseLeftButtonDown = false;
         if (device.spaceKey) {
             this.$container.style.cursor = CURSOR_GRAB;
@@ -342,8 +355,6 @@ export default class Interaction {
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
         device.keyCode = ev.keyCode;
-        device.pageX = ev.pageX;
-        device.pageY = ev.pageY;
         device.pageX = ev.pageX;
         device.pageY = ev.pageY;
     }    

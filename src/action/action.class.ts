@@ -11,11 +11,32 @@ const CURSOR_GRAB = '-webkit-grab';
 const CURSOR_GRABBING = '-webkit-grabbing';
 
 export default class Action {
+    public static POINTER_DOWN = POINTER_DOWN;
+    public static POINTER_MOVE = POINTER_MOVE;
+    public static POINTER_UP = POINTER_UP;
+    public static POINT_CLICK = POINT_CLICK;
+    public static WHEEL = WHEEL;
+    public static KEY_DOWN = KEY_DOWN;
+    public static KEY_UP = KEY_UP;
+    public static KEY_PRESS = KEY_PRESS;
+    public static CURSOR_DEFAULT = CURSOR_DEFAULT;
+    public static CURSOR_GRAB = CURSOR_GRAB;
+    public static CURSOR_GRABBING = CURSOR_GRABBING;
+
     private $target;
     private state;
     private device;
+    private config;
     
     constructor (config) {
+        this.config = config || {};
+
+        if (!config.$target) {
+            return;
+        }
+
+        this.$target = config.$target;
+        this.$target.style.cursor = config.cursor.pointerOver;
 
         let device = this.device = {
             altKey: false,
@@ -36,6 +57,8 @@ export default class Action {
         let state = this.state = {
             startX: 0,
             startY: 0,
+            deltaX: 0,
+            deltaY: 0,
             wheelValue: config.initWheelValue || 0,
             scaleValue: config.initScaleValue || 1
         };
@@ -58,21 +81,26 @@ export default class Action {
             }
         }
 
-        this.$target.addEventListener(WHEEL, wrap((device, state, ev) => {
-            this.onWheel(device, state, ev);
-        }), false);
+        
 
-        this.$target.addEventListener(POINTER_DOWN, wrap((device, state, ev) => {
-            this.onMouseDown(device, state, ev);
-        }), false);
+        const pointerMoveHandler = wrap((device, state, ev) => {
+            this.onPointerMove(device, state, ev);
+        });
 
-        window.addEventListener(POINTER_MOVE, wrap((device, state, ev) => {
-            this.onMouseMove(device, state, ev);
-        }), false);
+        const pointerUpHandler = wrap((device, state, ev) => {
+            this.onPointerUp(device, state, ev);
 
-        window.addEventListener(POINTER_UP, wrap((device, state, ev) => {
-            this.onMouseUp(device, state, ev);
-        }), false);        
+            window.removeEventListener(POINTER_MOVE, pointerMoveHandler);
+            window.removeEventListener(POINTER_UP, pointerUpHandler);
+        });
+
+        const pointerDownHandler = wrap((device, state, ev) => {
+            this.onPointerDown(device, state, ev);
+
+            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
+            window.addEventListener(POINTER_UP, pointerUpHandler, false);
+        });
+        this.$target.addEventListener(POINTER_DOWN, pointerDownHandler, false);
 
         window.addEventListener(KEY_DOWN, wrap((device, state, ev) => {            
             this.onKeyDown(device, state, ev);
@@ -80,65 +108,79 @@ export default class Action {
 
         window.addEventListener(KEY_UP, wrap((device, state, ev) => {
             this.onKeyUp(device, state, ev);
-        }), false);        
+        }), false);
+        
+        const wheelHandler = wrap((device, state, ev) => {
+            this.onWheel(device, state, ev);
+        });
+        this.$target.addEventListener(WHEEL, wheelHandler, false);
     }
 
-    onMouseDown(device, state, ev) {
+    onPointerDown(device, state, ev) {
         // ev.pageY === ev.y
         // ev.layerY 相对于父容器
         // ev.pageY 相对于页面
         // ev.offsetY 相对于target的位置
 
-        if (device.isMouseLeftButtonDown && device.spaceKey) {
-            this.$target.style.cursor = CURSOR_GRABBING;
+        if (this.config.cursor.pointerDown && device.isMouseLeftButtonDown) {
+            this.$target.style.cursor = this.config.cursor.pointerDown;
         }
+
+        state.startX = device.pageX;
+        state.startY = device.pageY;
+
+        this.config.onPointerDown && this.config.onPointerDown(device, state, ev);
+    }
+
+    onPointerMove(device, state, ev) {
+        if (this.config.canMouseMove && !this.config.canMouseMove()) {
+            return;
+        }
+
+        state.deltaX = device.pageX - state.startX;
+        state.deltaY = device.pageY - state.startY;
+
+        this.config.onPointerMove && this.config.onPointerMove(device, state, ev);
 
         state.startX = device.pageX;
         state.startY = device.pageY;
     }
 
-    onMouseMove(device, state, ev) {
-        if (device.isMouseLeftButtonDown && device.spaceKey) {
-            state.startX = device.pageX;
-            state.startY = device.pageY;
-        }
-    }
-
-    onMouseUp(device, state, ev) {
-        device.isMouseLeftButtonDown = false;
-        if (device.spaceKey) {
-            this.$target.style.cursor = CURSOR_GRAB;
-        } else {
-            this.$target.style.cursor = CURSOR_DEFAULT;
-        }
+    onPointerUp(device, state, ev) {
+        if (this.config.cursor.pointerUp && !device.isMouseLeftButtonDown) {
+            this.$target.style.cursor = this.config.cursor.pointerUp;
+        }        
+        this.config.onPointerUp && this.config.onPointerUp(device, state, ev);
     }
 
     onWheel(device, state, ev) {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
-            this.onScale();
+            this.onScale(device, state, ev);
         } else { // 平移
-            this.onPan();
+            this.onPan(device, state, ev);
         }
+
+        this.config.onWheel && this.config.onWheel(device, state, ev);
     }
 
     onKeyDown(device, state, ev) {
-        if (device.spaceKey && !device.isMouseLeftButtonDown) {
-            this.$target.style.cursor = CURSOR_GRAB;
-        }
+        this.config.onKeyDown && this.config.onKeyDown(device, state, ev);
     }
 
     onKeyUp(device, state, ev) {
         this.$target.style.cursor = CURSOR_DEFAULT;
+
+        this.config.onKeyUp && this.config.onKeyUp(device, state, ev);
     }
 
-    onScale () {
-
+    onScale (device, state, ev) {
+        this.config.onScale && this.config.onScale(device, state, ev);
     }
 
-    onPan () {
-        
+    onPan (device, state, ev) {
+        this.config.onPan && this.config.onPan(device, state, ev);
     }
 
     // 键盘事件属性
@@ -174,8 +216,6 @@ export default class Action {
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
         device.keyCode = ev.keyCode;
-        device.pageX = ev.pageX;
-        device.pageY = ev.pageY;
         device.pageX = ev.pageX;
         device.pageY = ev.pageY;
     }         
