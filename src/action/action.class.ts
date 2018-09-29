@@ -1,10 +1,12 @@
 'use strict'
 
 import utils from '../utils/utils';
-import Event from '../event/event';
+import Event from '../utils/event';
+import Watcher from '../utils/watcher';
 import IActionConfig from '../interface/actionConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
+import IPanInfo from '../interface/panInfo.interface';
 
 const POINTER_DOWN: string = 'mousedown';
 const POINTER_MOVE: string = 'mousemove';
@@ -21,8 +23,6 @@ const CURSOR_GRABBING: string = '-webkit-grabbing';
 const TRACKPAD_PAN_RATE: number = -1;
 const TRACKPAD_PINCH_RATE: number = 12;
 const WHEEL_SCALE_RATE: number = 1000;
-const MAX_WHEEL_VALUE: number = 10000;
-const MIN_WHEEL_VALUE: number = 100;
 const MAX_SCALE_VALUE: number = 10;
 const MIN_SCALE_VALUE: number = 0.1;
 
@@ -88,12 +88,16 @@ export default class Action {
             startY: 0,
             deltaX: 0,
             deltaY: 0,
-            wheelValue: config.initScaleValue * WHEEL_SCALE_RATE,
             scaleValue: config.initScaleValue || 1,
             beforeScaleValue: config.initScaleValue || 1,
             dragging: false
         };
         let state: IActionState = this.state
+
+        Watcher.register(state, 'scaleValue');
+        Watcher.watch(state, 'scaleValue', function(newValue: number, oldValue: number){
+            console.log(newValue, oldValue);
+        });
 
         let self = this;
         function wrap (callback: Function) {
@@ -194,9 +198,8 @@ export default class Action {
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
             state.beforeScaleValue = state.scaleValue;
-            state.wheelValue -= device.deltaY * TRACKPAD_PINCH_RATE;
-            state.wheelValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE); // 约束
-            state.scaleValue = state.wheelValue / WHEEL_SCALE_RATE;
+            state.scaleValue -= device.deltaY * TRACKPAD_PINCH_RATE / WHEEL_SCALE_RATE;
+            state.scaleValue = utils.range(state.scaleValue, MIN_SCALE_VALUE, MAX_SCALE_VALUE); // 约束
             this.onScale(device, state, ev);
         } else { // 平移
             const rate = TRACKPAD_PAN_RATE;
@@ -266,9 +269,9 @@ export default class Action {
     }
 
     private bindEvent (): void {
-        Event.on(Event.CANVAS_PAN, (delta: any) => {
-            this.state.deltaX = delta.deltaX;
-            this.state.deltaY = delta.deltaY;
+        Event.on(Event.CANVAS_PAN, (panInfo: IPanInfo) => {
+            this.state.deltaX = panInfo.deltaX;
+            this.state.deltaY = panInfo.deltaY;
             this.config.onPan && this.config.onPan(this.device, this.state);
         });
 

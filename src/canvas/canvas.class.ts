@@ -5,7 +5,7 @@ import * as styles from './canvas.less';
 import utils from '../utils/utils';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import ICanvasStyle from '../interface/canvasRectInfo.interface';
-import Event from '../event/event';
+import Event from '../utils/event';
 
 
 export default class Canvas {

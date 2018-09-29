@@ -18,7 +18,7 @@ export default class Interaction {
     private movableWhenContained: boolean = true;
     private canvasOriginWidth: number;
     private canvasOriginHeight: number;
-    private initScaleValue: number;
+    public initScaleValue: number;
     private action: Action;
 
     constructor($container: HTMLElement, config: IDesignerConfig) {

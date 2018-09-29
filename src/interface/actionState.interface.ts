@@ -5,7 +5,6 @@ export default interface IState {
     startY: number,
     deltaX: number,
     deltaY: number,
-    wheelValue: number,
     scaleValue: number,
     beforeScaleValue: number,
     dragging: boolean

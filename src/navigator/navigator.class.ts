@@ -2,11 +2,12 @@
 
 import * as styles from './navigator.less';
 import Action from '../action/action.class';
-import Event from '../event/event';
+import Event from '../utils/event';
 import Interaction from '../interaction/interaction.class';
 import INavigatorConfig from '../interface/navigatorConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
+
 
 export default class Navigator {
     private $navigator: HTMLElement;
@@ -40,6 +41,7 @@ export default class Navigator {
         this.$minBtn = $dom.querySelector(`.${styles.min}`);
         this.$maxBtn = $dom.querySelector(`.${styles.max}`);
         this.interaction = config.interaction;
+        this.$range.value = this.interaction.initScaleValue.toString();
 
         this.containThumbnail();
         this.setThumnnail();
@@ -51,12 +53,13 @@ export default class Navigator {
     }
 
     bindEvent (): void {
+
         Event.on(Event.CANVAS_TRANSFORM, () => {
             this.setVisibleScope();
         });
 
         this.$range.addEventListener(Action.INPUT, (ev: KeyboardEvent) => {
-            Event.trigger(Event.CANVAS_SCALE, this.$range.value);            
+            Event.trigger(Event.CANVAS_SCALE, Number(this.$range.value));
         }, false);
 
         this.$minBtn.addEventListener(Action.POINT_CLICK, (ev: MouseEvent) => {

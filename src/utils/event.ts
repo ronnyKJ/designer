@@ -10,12 +10,12 @@ class Event {
         this.events = {};
     }
 
-    on (evt: string, callback: Function): void {
+    public on (evt: string, callback: Function): void {
         let evts = this.events[evt] = this.events[evt] || [];
         evts.push(callback);
     }
 
-    trigger (evt: string, data: any): void {
+    public trigger (evt: string, data: any): void {
         const callbacks = this.events[evt];
         callbacks && callbacks.forEach((callback: Function) => {
             callback && callback(data);
