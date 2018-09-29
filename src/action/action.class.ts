@@ -14,7 +14,6 @@ const CURSOR_GRABBING = '-webkit-grabbing';
 const TRACKPAD_PAN_RATE = -1;
 const TRACKPAD_PINCH_RATE = 12;
 const MAX_WHEEL_VALUE = 10000;
-const INIT_WHEEL_VALUE = 1000;
 const MIN_WHEEL_VALUE = 100;
 const WHEEL_SCALE_RATE = 1000;
 
@@ -73,7 +72,7 @@ export default class Action {
             startY: 0,
             deltaX: 0,
             deltaY: 0,
-            wheelValue: INIT_WHEEL_VALUE,
+            wheelValue: config.initScaleValue * WHEEL_SCALE_RATE,
             scaleValue: config.initScaleValue || 1,
             beforeScaleValue: config.initScaleValue || 1,
             dragging: false
@@ -175,7 +174,8 @@ export default class Action {
         if (device.ctrlKey) { // 缩放 ctrl+滚动
             state.beforeScaleValue = state.scaleValue;
             state.wheelValue -= device.deltaY * TRACKPAD_PINCH_RATE;
-            state.scaleValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE) / WHEEL_SCALE_RATE;
+            state.wheelValue = utils.range(state.wheelValue, MIN_WHEEL_VALUE, MAX_WHEEL_VALUE); // 约束
+            state.scaleValue = state.wheelValue / WHEEL_SCALE_RATE;
             this.onScale(device, state, ev);
         } else { // 平移
             const rate = TRACKPAD_PAN_RATE;

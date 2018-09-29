@@ -26,7 +26,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 new Designer(document.querySelector(`.${appStyles.container}`), {
-    canvasOriginWidth: 2000,
-    canvasOriginHeight: 1000,
+    canvasOriginWidth: 400,
+    canvasOriginHeight: 200,
     $navigator: document.querySelector(`.${appStyles.navigator}`)
 });
