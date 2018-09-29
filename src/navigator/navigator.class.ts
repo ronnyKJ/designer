@@ -3,49 +3,68 @@
 import * as styles from './navigator.less';
 import Action from '../action/action.class';
 import Event from '../event/event';
-import INavigatorOptions from '../interface/navigatorConfig.interface';
+import Interaction from '../interaction/interaction.class';
+import INavigatorConfig from '../interface/navigatorConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
 
 export default class Navigator {
     private $navigator: HTMLElement;
     private $container: HTMLElement;
-    private $interaction: HTMLElement;
     private $thumbnail: HTMLElement;
     private $scope: HTMLElement;
-    private $slider: HTMLInputElement;
+    private $range: HTMLInputElement;
+    private $minBtn: HTMLInputElement;
+    private $maxBtn: HTMLInputElement;
+    private interaction: Interaction;
     
-    constructor ($dom: HTMLElement, config: INavigatorOptions) {
+    constructor ($dom: HTMLElement, config: INavigatorConfig) {
         $dom.innerHTML = `
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
                     <div class="${styles.scope}"></div>                
                 </div>
                 <div class="${styles.slider}">
-                    <input type="range" max="10" min="0.1" defaultValue="1" step="0.1" />
+                    <input type="button" class="${styles.min}" value="min" />
+                    <input type="range" class="${styles.range}" max="10" min="0.1" defaultValue="1" step="0.1" />
+                    <input type="button" class="${styles.max}" value="max" />
                 </div>
             </div>
         `;
 
         this.$container = config.$container;
-        this.$interaction = config.$interaction;
         this.$navigator = $dom.querySelector(`.${styles.navigator}`);
         this.$thumbnail = $dom.querySelector(`.${styles.thumbnail}`);
         this.$scope = $dom.querySelector(`.${styles.scope}`);
-        this.$slider = $dom.querySelector(`.${styles.slider} input`);
+        this.$range = $dom.querySelector(`.${styles.range}`);
+        this.$minBtn = $dom.querySelector(`.${styles.min}`);
+        this.$maxBtn = $dom.querySelector(`.${styles.max}`);
+        this.interaction = config.interaction;
 
         this.containThumbnail();
         this.setThumnnail();
 
         this.setVisibleScope();
+
+        this.panScope();
+        this.bindEvent();   
+    }
+
+    bindEvent (): void {
         Event.on(Event.CANVAS_TRANSFORM, () => {
             this.setVisibleScope();
         });
 
-        this.panScope();
+        this.$range.addEventListener(Action.INPUT, (ev: KeyboardEvent) => {
+            Event.trigger(Event.CANVAS_SCALE, this.$range.value);            
+        }, false);
 
-        this.$slider.addEventListener('input', (ev: KeyboardEvent) => {
-            Event.trigger(Event.SCOPE_SCALE, this.$slider.value);            
+        this.$minBtn.addEventListener(Action.POINT_CLICK, (ev: MouseEvent) => {
+            Event.trigger(Event.CANVAS_SCALE, Action.MIN_SCALE_VALUE);            
+        }, false);
+        
+        this.$maxBtn.addEventListener(Action.POINT_CLICK, (ev: MouseEvent) => {
+            Event.trigger(Event.CANVAS_SCALE, Action.MAX_SCALE_VALUE);
         }, false);
     }
 
@@ -53,8 +72,9 @@ export default class Navigator {
         const rect = this.$navigator.getBoundingClientRect();
         const nw = rect.width;
         const nh = rect.height;
-        const tw = this.$interaction.offsetWidth;
-        const th = this.$interaction.offsetHeight;
+        const $in = this.interaction.$interaction;
+        const tw = $in.offsetWidth;
+        const th = $in.offsetHeight;
 
         let style = this.$thumbnail.style;
         if (nw / nh > tw / th) {
@@ -79,7 +99,7 @@ export default class Navigator {
          * 当可视范围框超出缩略图时，限制在缩略图范围内
          */
         const $con = this.$container;
-        const $inter = this.$interaction;
+        const $inter = this.interaction.$interaction;
         const $thumbnail = this.$thumbnail;
 
         const containerWidth = $con.offsetWidth;
@@ -135,8 +155,9 @@ export default class Navigator {
                     const thumbnailWidth = self.$thumbnail.offsetWidth;
                     const thumbnailHeight = self.$thumbnail.offsetHeight;
 
-                    let tmpX = -state.deltaX / thumbnailWidth * self.$interaction.offsetWidth;
-                    let tmpY = -state.deltaY / thumbnailHeight * self.$interaction.offsetHeight;
+                    const $in = self.interaction.$interaction;
+                    let tmpX = -state.deltaX / thumbnailWidth * $in.offsetWidth;
+                    let tmpY = -state.deltaY / thumbnailHeight * $in.offsetHeight;
 
                     if (thumbnailWidth === self.$scope.offsetWidth) {
                         tmpX = 0;
@@ -146,7 +167,7 @@ export default class Navigator {
                         tmpY = 0;
                     }
 
-                    Event.trigger(Event.SCOPE_PAN, {
+                    Event.trigger(Event.CANVAS_PAN, {
                         deltaX: tmpX,
                         deltaY: tmpY
                     });

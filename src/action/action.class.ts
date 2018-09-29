@@ -1,6 +1,7 @@
 'use strict'
 
 import utils from '../utils/utils';
+import Event from '../event/event';
 import IActionConfig from '../interface/actionConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
@@ -13,14 +14,17 @@ const WHEEL: string = 'wheel';
 const KEY_DOWN: string = 'keydown';
 const KEY_UP: string = 'keyup';
 const KEY_PRESS: string = 'keypress';
+const INPUT: string = 'input';
 const CURSOR_DEFAULT: string = 'default';
 const CURSOR_GRAB: string = '-webkit-grab';
 const CURSOR_GRABBING: string = '-webkit-grabbing';
 const TRACKPAD_PAN_RATE: number = -1;
 const TRACKPAD_PINCH_RATE: number = 12;
+const WHEEL_SCALE_RATE: number = 1000;
 const MAX_WHEEL_VALUE: number = 10000;
 const MIN_WHEEL_VALUE: number = 100;
-const WHEEL_SCALE_RATE: number = 1000;
+const MAX_SCALE_VALUE: number = 10;
+const MIN_SCALE_VALUE: number = 0.1;
 
 export default class Action {
     public static POINTER_DOWN: string = POINTER_DOWN;
@@ -31,9 +35,12 @@ export default class Action {
     public static KEY_DOWN: string = KEY_DOWN;
     public static KEY_UP: string = KEY_UP;
     public static KEY_PRESS: string = KEY_PRESS;
+    public static INPUT: string = INPUT;
     public static CURSOR_DEFAULT: string = CURSOR_DEFAULT;
     public static CURSOR_GRAB: string = CURSOR_GRAB;
     public static CURSOR_GRABBING: string = CURSOR_GRABBING;
+    public static MAX_SCALE_VALUE: number = MAX_SCALE_VALUE;
+    public static MIN_SCALE_VALUE: number = MIN_SCALE_VALUE;
 
     private $target: HTMLElement;
     private $wheelTarget: HTMLElement;
@@ -139,6 +146,8 @@ export default class Action {
             this.onWheel(device, state, ev);
         });
         this.$wheelTarget.addEventListener(WHEEL, wheelHandler, false);
+
+        this.bindEvent();
     }
 
     private onPointerDown(device: IActionDevice, state: IActionState, ev: MouseEvent): void {
@@ -254,5 +263,19 @@ export default class Action {
         device.wheelDeltaY = ev.wheelDeltaY;
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
-    }    
+    }
+
+    private bindEvent (): void {
+        Event.on(Event.CANVAS_PAN, (delta: any) => {
+            this.state.deltaX = delta.deltaX;
+            this.state.deltaY = delta.deltaY;
+            this.config.onPan && this.config.onPan(this.device, this.state);
+        });
+
+        Event.on(Event.CANVAS_SCALE, (scaleValue: number) => {
+            this.state.beforeScaleValue = this.state.scaleValue;
+            this.state.scaleValue = scaleValue;
+            this.config.onScale && this.config.onScale(this.device, this.state);
+        });
+    }
 }

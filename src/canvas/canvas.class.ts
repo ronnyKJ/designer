@@ -4,6 +4,9 @@ import Interaction from '../interaction/interaction.class';
 import * as styles from './canvas.less';
 import utils from '../utils/utils';
 import IDesignerConfig from '../interface/designerConfig.interface';
+import ICanvasStyle from '../interface/canvasRectInfo.interface';
+import Event from '../event/event';
+
 
 export default class Canvas {
     private $container: HTMLElement;
@@ -18,14 +21,22 @@ export default class Canvas {
         this.$canvas = $container.querySelector(`.${styles.canvas}`);
 
         const interRect = this.interaction.getInteractionRect();
-        utils.setStyle(this.$canvas, {
-            width: interRect.width + 'px',
-            height: interRect.height + 'px',
-            left: interRect.x + 'px',
-            top: interRect.y + 'px'
-        });
+        this.setStyle(interRect);
 
         this.width = config.canvasOriginWidth;
         this.height = config.canvasOriginHeight;
+
+        Event.on(Event.CANVAS_TRANSFORM, (rectInfo: ICanvasStyle) => {
+            this.setStyle(rectInfo);
+        });        
+    }
+
+    private setStyle (style: ICanvasStyle): void {
+        utils.setStyle(this.$canvas, {
+            width: style.width + 'px',
+            height: style.height + 'px',
+            left: style.x + 'px',
+            top: style.y + 'px'
+        });        
     }
 }

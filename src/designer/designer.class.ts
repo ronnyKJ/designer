@@ -14,7 +14,7 @@ export default class Designer {
         if (config.$navigator) {
             let navigator: Navigator = new Navigator(config.$navigator, {
                 $container: $container,
-                $interaction: interaction.$interaction,
+                interaction: interaction,
                 canvasOriginWidth: config.canvasOriginWidth,
                 canvasOriginHeight: config.canvasOriginHeight
             });

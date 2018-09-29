@@ -7,7 +7,7 @@ import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
-import IInteractionStyleInfo from '../interface/interactionStyle.interface';
+import ICanvasRectInfo from '../interface/canvasRectInfo.interface';
 
 const KEEP_INSIDE: number = 0.2;
 const INIT_CANVAS_MAX_RATIO: number = 0.9; // 初始化canvas长边占容器对应边比例
@@ -30,14 +30,6 @@ export default class Interaction {
         this.preventBrowserDefaultAction();
         this.initCanvas(config);
         this.initAction();
-
-        Event.on(Event.SCOPE_PAN, (delta: any) => {
-            this.pan(delta.deltaX, delta.deltaY);
-        });
-
-        Event.on(Event.SCOPE_SCALE, (delta: any) => {
-            this.pan(delta.deltaX, delta.deltaY);
-        });
     }
 
     private initCanvas (config: IDesignerConfig): void {
@@ -124,7 +116,7 @@ export default class Interaction {
         this.setStyle({x, y, width, height});
     }
 
-    private setStyle(info: IInteractionStyleInfo): void {
+    private setStyle(info: ICanvasRectInfo): void {
         let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
         info.hasOwnProperty('height') && (style.height = `${info.height}px`);
@@ -176,15 +168,24 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onScale (device: IActionDevice, state: IActionState, ev: MouseEvent) {
+            onScale (device: IActionDevice, state: IActionState, ev?: MouseEvent) {
 
                 const rect = self.$interaction.getBoundingClientRect();
-                const offsetX = ev.pageX - rect.left;
-                const offsetY = ev.pageY - rect.top;
+
+                let offsetX;
+                let offsetY;
+                if (ev) {
+                    offsetX = ev.pageX - rect.left;
+                    offsetY = ev.pageY - rect.top;
+                } else {
+                    offsetX = self.$interaction.offsetWidth / 2;
+                    offsetY = self.$interaction.offsetHeight / 2;
+                }
+
                 
                 self.scale(state.scaleValue, state.beforeScaleValue, offsetX, offsetY);
             },
-            onPan (device: IActionDevice, state: IActionState, ev: MouseEvent) {
+            onPan (device: IActionDevice, state: IActionState, ev?: MouseEvent) {
                 const movable = self.isMovable();
                 if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
                     self.pan(state.deltaX, state.deltaY);

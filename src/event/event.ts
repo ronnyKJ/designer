@@ -3,8 +3,8 @@
 class Event {
     private events: any;
     public CANVAS_TRANSFORM: string = 'canvas_transform';
-    public SCOPE_PAN: string = 'scope_pan';
-    public SCOPE_SCALE: string = 'scope_scale'
+    public CANVAS_PAN: string = 'scope_pan';
+    public CANVAS_SCALE: string = 'scope_scale'
 
     constructor () {
         this.events = {};
