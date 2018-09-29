@@ -5,8 +5,8 @@ import utils from '../utils/utils';
 import Event from '../event/event';
 import Action from '../action/action.class';
 
-const INIT_SCALE_VALUE = 1;
 const KEEP_INSIDE = 0.2;
+const INIT_CANVAS_MAX_RATIO = 0.9; // 初始化canvas长边占容器对应边比例
 
 
 // 概念
@@ -19,32 +19,20 @@ export default class Interaction {
     public $interaction: HTMLElement;
     private $container: HTMLElement;
     private movableWhenContained: boolean = true;
-    private visibleSideWidth: number = 0;
-    private visibleSideHeight: number = 0;
     private canvasOriginWidth;
     private canvasOriginHeight;
     private action;
+    private initScaleValue;
 
-    constructor(container, options) {
+    constructor($container, options) {
         options = options || {};
-
-        this.$container = container;
-        const rect = this.getContainerRect();
-        this.visibleSideWidth = rect.width * KEEP_INSIDE;
-        this.visibleSideHeight = rect.height * KEEP_INSIDE;
-
-        this.$interaction = container.querySelector(`.${styles.interaction}`);
-        let style = this.$interaction.style;
-        style.width = options.canvasWidth + 'px';
-        style.height = options.canvasHeight + 'px';
-        style.left = (rect.width - options.canvasWidth) / 2 + 'px';
-        style.top = (rect.height - options.canvasHeight) / 2 + 'px';
-        this.canvasOriginWidth = options.canvasWidth;
-        this.canvasOriginHeight = options.canvasHeight;
-
-
         this.movableWhenContained = options.movableWhenContained || true;
 
+        this.$container = $container;
+        this.$interaction = $container.querySelector(`.${styles.interaction}`);
+
+        this.preventBrowserDefaultAction();
+        this.initCanvas(options);
         this.initAction();
 
         Event.on(Event.SCOPE_PAN, (delta) => {
@@ -56,7 +44,59 @@ export default class Interaction {
         });
     }
 
-    setPanStyle(offsetX: number, offsetY: number) {
+    private initCanvas (options) {
+        const containerRect = this.getContainerRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+
+        const canvasOriginWidth = options.canvasOriginWidth;
+        const canvasOriginHeight = options.canvasOriginHeight;
+
+        let initWidth;
+        let initHeight;
+        if (containerWidth / containerHeight > canvasOriginWidth / canvasOriginHeight) { // 高为长边
+            initHeight = containerHeight * INIT_CANVAS_MAX_RATIO;
+            initWidth = initHeight / canvasOriginHeight * canvasOriginWidth;
+        } else {
+            initWidth = containerWidth * INIT_CANVAS_MAX_RATIO;
+            initHeight = initWidth / canvasOriginWidth * canvasOriginHeight;
+        }
+
+        if (initWidth > canvasOriginWidth) {
+            initWidth = canvasOriginWidth;
+        }
+        if (initHeight > canvasOriginHeight) {
+            initHeight = canvasOriginHeight;
+        }        
+
+        this.initScaleValue = initWidth / canvasOriginWidth;
+
+        utils.setStyle(this.$interaction, {
+            width: initWidth + 'px',
+            height: initHeight + 'px',
+            left: (containerWidth - initWidth) / 2 + 'px',
+            top: (containerHeight - initHeight) / 2 + 'px'
+        });
+    }
+
+    public getInteractionRect () {
+        const $in = this.$interaction
+        return {
+            width: $in.offsetWidth,
+            height: $in.offsetHeight,
+            x: $in.offsetLeft,
+            y: $in.offsetTop
+        };
+    }
+
+    private preventBrowserDefaultAction () {
+        // 在容器上阻止网页默认操作，后退、缩放
+        this.$container.addEventListener(Action.WHEEL, (ev) => {
+            ev.preventDefault();
+        }, false);
+    }
+
+    private setPanStyle(offsetX: number, offsetY: number) {
         const info = this.getEntityInfo();
 
         let x = info.left + offsetX;
@@ -69,7 +109,7 @@ export default class Interaction {
         this.setStyle({ x, y });
     }
 
-    getSourceInfo(ev: MouseEvent) {
+    private getSourceInfo(ev: MouseEvent) {
         // 求出 鼠标在缩放之后的 interaction 中的位置
         // 映射到原始 container 中的位置
         const interRect = this.$interaction.getBoundingClientRect();
@@ -86,7 +126,7 @@ export default class Interaction {
         return { originX, originY, offsetX, offsetY};
     }
 
-    getEntityInfo() {
+    private getEntityInfo() {
         const i = this.$interaction;
         const left = parseInt(i.style.left) || 0;
         const top = parseInt(i.style.top) || 0;
@@ -95,12 +135,12 @@ export default class Interaction {
         return { top, left, width, height };
     }
 
-    getContainerRect() {
+    private getContainerRect() {
         return this.$container.getBoundingClientRect();
     }
 
     // 相对于 base
-    getTransformStyle(offsetX: number = 0, offsetY: number = 0, originX: number, originY: number, scale: number) {
+    private getTransformStyle(offsetX: number = 0, offsetY: number = 0, originX: number, originY: number, scale: number) {
         const width = this.canvasOriginWidth;
         const height = this.canvasOriginHeight;
         const scaledWidth = width * scale;
@@ -129,7 +169,7 @@ export default class Interaction {
         };
     }
 
-    setStyle(info) {
+    private setStyle(info) {
         // offset 是相对于 base
         let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
@@ -141,30 +181,34 @@ export default class Interaction {
         Event.trigger(Event.CANVAS_TRANSFORM, info);
     }
 
-    keepVisible(x, y, entityWidth, entityHeight) {
+    private keepVisible(x, y, entityWidth, entityHeight) {
         const cRect = this.getContainerRect();
 
-        const tmp1 = this.visibleSideWidth - entityWidth;
-        (x < tmp1) && (x = tmp1);
+        const containerRect = this.getContainerRect();
+        const visibleSideWidth = containerRect.width * KEEP_INSIDE;
+        const visibleSideHeight = containerRect.height * KEEP_INSIDE;
+        
+        const tmpX1 = visibleSideWidth - entityWidth;
+        (x < tmpX1) && (x = tmpX1);
 
-        const tmp2 = cRect.width - this.visibleSideWidth;
-        (x > tmp2) && (x = tmp2);
+        const tmpX2 = cRect.width - visibleSideWidth;
+        (x > tmpX2) && (x = tmpX2);
 
-        const tmp3 = this.visibleSideHeight - entityHeight;
-        (y < tmp3) && (y = tmp3);
+        const tmpY1 = visibleSideHeight - entityHeight;
+        (y < tmpY1) && (y = tmpY1);
 
-        const tmp4 = cRect.height - this.visibleSideHeight;
-        (y > tmp4) && (y = tmp4);
+        const tmpY2 = cRect.height - visibleSideHeight;
+        (y > tmpY2) && (y = tmpY2);
 
         return { x, y };
     } 
 
-    initAction() {
+    private initAction() {
         const self = this;
         this.action = new Action({
             $target: this.$interaction,
             $wheelTarget: this.$container,
-            initScaleValue: INIT_SCALE_VALUE,
+            initScaleValue: this.initScaleValue,
             onPointerDown (device, state, ev) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
@@ -200,7 +244,7 @@ export default class Interaction {
         });
     }
 
-    isMovable(): boolean {
+    private isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
         return !(this.movableWhenContained === false && this.action.state.scaleValue <= 1);
     }

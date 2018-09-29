@@ -2,14 +2,11 @@
 import Designer from './designer/designer.class';
 import * as appStyles from './app.less'; // 需要有真正引用，才会编译生成app.less.d.ts
 import * as interactionStyles from './interaction/interaction.less';
-import * as rendererStyles from './renderer/renderer.less';
+import * as canvasStyles from './canvas/canvas.less';
 
 document.querySelector('#app').innerHTML = `
 <div class="${appStyles.container}">
-    <!-- <div class="${rendererStyles.renderer}">
-        <div class="${rendererStyles.object} ${rendererStyles.base}"></div>
-        <div id="object" class="${rendererStyles.object} ${rendererStyles.box}"></div>
-    </div> -->
+    <div class="${canvasStyles.canvas}"></div>
 
     <div class="${interactionStyles.interaction}">
         <!-- <div class="${interactionStyles.adjuster}">
@@ -29,7 +26,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 new Designer(document.querySelector(`.${appStyles.container}`), {
-    canvasWidth: 200,
-    canvasHeight: 100,
+    canvasOriginWidth: 2000,
+    canvasOriginHeight: 1000,
     $navigator: document.querySelector(`.${appStyles.navigator}`)
 });
