@@ -5,12 +5,12 @@ class Util {
         return Math.min(Math.max(val, min), max);
     }
 
-    setStyle ($dom: HTMLElement, style: any): void {
+    setStyle ($dom: HTMLElement, style: Partial<CSSStyleDeclaration>): void {
         for (let prop in style) {
             $dom.style[prop] = style[prop];
+            
         }
     }
 }
-
 
 export default new Util();

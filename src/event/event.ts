@@ -17,7 +17,7 @@ class Event {
 
     trigger (evt: string, data: any): void {
         const callbacks = this.events[evt];
-        callbacks && callbacks.forEach((callback) => {
+        callbacks && callbacks.forEach((callback: Function) => {
             callback && callback(data);
         });
     }    

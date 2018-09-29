@@ -5,10 +5,18 @@ import utils from '../utils/utils';
 import Event from '../event/event';
 import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
+import IActionDevice from '../interface/actionDevice.interface';
+import IActionState from '../interface/actionState.interface';
 
 const KEEP_INSIDE: number = 0.2;
 const INIT_CANVAS_MAX_RATIO: number = 0.9; // 初始化canvas长边占容器对应边比例
 
+interface IStyleInfo {
+    x: number,
+    y: number,
+    width?: number,
+    height?: number
+}
 
 export default class Interaction {
     public $interaction: HTMLElement;
@@ -29,16 +37,16 @@ export default class Interaction {
         this.initCanvas(config);
         this.initAction();
 
-        Event.on(Event.SCOPE_PAN, (delta) => {
+        Event.on(Event.SCOPE_PAN, (delta: any) => {
             this.pan(delta.deltaX, delta.deltaY);
         });
 
-        Event.on(Event.SCOPE_SCALE, (delta) => {
+        Event.on(Event.SCOPE_SCALE, (delta: any) => {
             this.pan(delta.deltaX, delta.deltaY);
         });
     }
 
-    private initCanvas (config): void {
+    private initCanvas (config: IDesignerConfig): void {
         const containerRect = this.$container.getBoundingClientRect();
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
@@ -122,7 +130,7 @@ export default class Interaction {
         this.setStyle({x, y, width, height});
     }
 
-    private setStyle(info): void {
+    private setStyle(info: IStyleInfo): void {
         let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
         info.hasOwnProperty('height') && (style.height = `${info.height}px`);
@@ -161,12 +169,12 @@ export default class Interaction {
             $target: this.$interaction,
             $wheelTarget: this.$container,
             initScaleValue: this.initScaleValue,
-            onPointerDown (device, state, ev: MouseEvent) {
+            onPointerDown (device: IActionDevice, state: IActionState, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
                 }
             },
-            onPointerUp (device, state, ev) {
+            onPointerUp (device: IActionDevice, state: IActionState, ev: MouseEvent) {
                 device.isMouseLeftButtonDown = false;
                 if (device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
@@ -174,7 +182,7 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onScale (device, state, ev: MouseEvent) {
+            onScale (device: IActionDevice, state: IActionState, ev: MouseEvent) {
 
                 const rect = self.$interaction.getBoundingClientRect();
                 const offsetX = ev.pageX - rect.left;
@@ -182,18 +190,18 @@ export default class Interaction {
                 
                 self.scale(state.scaleValue, state.beforeScaleValue, offsetX, offsetY);
             },
-            onPan (device, state, ev: MouseEvent) {
+            onPan (device: IActionDevice, state: IActionState, ev: MouseEvent) {
                 const movable = self.isMovable();
                 if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
                     self.pan(state.deltaX, state.deltaY);
                 }
             },
-            onKeyDown (device, state, ev: KeyboardEvent) {
+            onKeyDown (device: IActionDevice, state: IActionState, ev: KeyboardEvent) {
                 if (device.spaceKey && !device.isMouseLeftButtonDown) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
                 }
             },
-            onKeyUp(device, state, ev: KeyboardEvent) {
+            onKeyUp(device: IActionDevice, state: IActionState, ev: KeyboardEvent) {
                 self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
             }
         });

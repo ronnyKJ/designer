@@ -4,16 +4,18 @@ import * as styles from './navigator.less';
 import Action from '../action/action.class';
 import Event from '../event/event';
 import INavigatorOptions from '../interface/navigatorConfig.interface';
+import IActionDevice from '../interface/actionDevice.interface';
+import IActionState from '../interface/actionState.interface';
 
 export default class Navigator {
-    private $navigator;
-    private $container;
-    private $interaction;
-    private $thumbnail;
-    private $scope;
-    private $slider;
+    private $navigator: HTMLElement;
+    private $container: HTMLElement;
+    private $interaction: HTMLElement;
+    private $thumbnail: HTMLElement;
+    private $scope: HTMLElement;
+    private $slider: HTMLInputElement;
     
-    constructor ($dom, config: INavigatorOptions) {
+    constructor ($dom: HTMLElement, config: INavigatorOptions) {
         $dom.innerHTML = `
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
@@ -47,7 +49,7 @@ export default class Navigator {
         }, false);
     }
 
-    containThumbnail () {
+    containThumbnail (): void {
         const rect = this.$navigator.getBoundingClientRect();
         const nw = rect.width;
         const nh = rect.height;
@@ -60,17 +62,17 @@ export default class Navigator {
             const tmp = nh / th * tw;
             style.width = tmp + 'px';
             style.left = (nw - tmp) / 2 + 'px';
-            style.top = 0;
+            style.top = 0 + 'px';
         } else {
             style.width = nw + 'px';
             const tmp = nw / tw * th;
             style.height = tmp + 'px';
             style.top = (nh - tmp) / 2 + 'px';
-            style.left = 0;
+            style.left = 0 + 'px';
         }
     }
 
-    setVisibleScope () {
+    setVisibleScope (): void {
         /*
          * 导航器: 
          * 缩略图相当于画布，可视范围框相当于画布的容器
@@ -120,15 +122,15 @@ export default class Navigator {
         style.top = scopeOffsetY + 'px';
     }
 
-    setThumnnail () {
+    setThumnnail (): void {
 
     }
 
-    panScope () {
+    panScope (): void {
         const self = this;
         new Action({
             $target: this.$scope,
-            onPointerMove (device, state, ev) {
+            onPointerMove (device: IActionDevice, state: IActionState, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown) {
                     const thumbnailWidth = self.$thumbnail.offsetWidth;
                     const thumbnailHeight = self.$thumbnail.offsetHeight;
@@ -147,7 +149,7 @@ export default class Navigator {
                     Event.trigger(Event.SCOPE_PAN, {
                         deltaX: tmpX,
                         deltaY: tmpY
-                    });                    
+                    });
                 }
             },
             cursor: {
