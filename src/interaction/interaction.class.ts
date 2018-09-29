@@ -4,28 +4,29 @@ import * as styles from './interaction.less';
 import utils from '../utils/utils';
 import Event from '../event/event';
 import Action from '../action/action.class';
+import IDesignerConfig from '../interface/designerConfig.interface';
 
-const KEEP_INSIDE = 0.2;
-const INIT_CANVAS_MAX_RATIO = 0.9; // 初始化canvas长边占容器对应边比例
+const KEEP_INSIDE: number = 0.2;
+const INIT_CANVAS_MAX_RATIO: number = 0.9; // 初始化canvas长边占容器对应边比例
+
 
 export default class Interaction {
     public $interaction: HTMLElement;
     private $container: HTMLElement;
     private movableWhenContained: boolean = true;
-    private canvasOriginWidth;
-    private canvasOriginHeight;
-    private action;
-    private initScaleValue;
+    private canvasOriginWidth: number;
+    private canvasOriginHeight: number;
+    private initScaleValue: number;
+    private action: Action;
 
-    constructor($container, options) {
-        options = options || {};
-        this.movableWhenContained = options.movableWhenContained || true;
+    constructor($container: HTMLElement, config: IDesignerConfig) {
+        this.movableWhenContained = config.movableWhenContained || true;
 
         this.$container = $container;
         this.$interaction = $container.querySelector(`.${styles.interaction}`);
 
         this.preventBrowserDefaultAction();
-        this.initCanvas(options);
+        this.initCanvas(config);
         this.initAction();
 
         Event.on(Event.SCOPE_PAN, (delta) => {
@@ -37,13 +38,13 @@ export default class Interaction {
         });
     }
 
-    private initCanvas (options) {
+    private initCanvas (config): void {
         const containerRect = this.$container.getBoundingClientRect();
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
 
-        const canvasOriginWidth = this.canvasOriginWidth = options.canvasOriginWidth;
-        const canvasOriginHeight = this.canvasOriginHeight = options.canvasOriginHeight;
+        const canvasOriginWidth = this.canvasOriginWidth = config.canvasOriginWidth;
+        const canvasOriginHeight = this.canvasOriginHeight = config.canvasOriginHeight;
 
         let initWidth;
         let initHeight;
@@ -102,11 +103,18 @@ export default class Interaction {
         this.setStyle({ x, y });
     }
 
-    private scale (scaleValue, beforeScaleValue, originX, originY) {
+    private scale (scaleValue: number, beforeScaleValue: number, originX?: number, originY?: number): void {
         const $in = this.$interaction;
-
         const width = this.canvasOriginWidth * scaleValue;
         const height = this.canvasOriginHeight * scaleValue;
+
+        if (!originX) {
+            originX = $in.offsetWidth / 2;
+        }
+
+        if (!originY) {
+            originY = $in.offsetHeight / 2;
+        }
 
         const x = $in.offsetLeft - (scaleValue / beforeScaleValue - 1) * originX;
         const y = $in.offsetTop - (scaleValue / beforeScaleValue - 1) * originY;
@@ -114,8 +122,7 @@ export default class Interaction {
         this.setStyle({x, y, width, height});
     }
 
-    private setStyle(info) {
-        // offset 是相对于 base
+    private setStyle(info): void {
         let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
         info.hasOwnProperty('height') && (style.height = `${info.height}px`);
@@ -126,20 +133,20 @@ export default class Interaction {
         Event.trigger(Event.CANVAS_TRANSFORM, info);
     }
 
-    private keepVisible(x, y, entityWidth, entityHeight) {
+    private keepVisible(x: number, y: number, width: number, height: number) {
         const containerRect = this.$container.getBoundingClientRect();
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
         const visibleSideWidth = containerWidth * KEEP_INSIDE;
         const visibleSideHeight = containerHeight * KEEP_INSIDE;
         
-        const tmpX1 = visibleSideWidth - entityWidth;
+        const tmpX1 = visibleSideWidth - width;
         (x < tmpX1) && (x = tmpX1);
 
         const tmpX2 = containerWidth - visibleSideWidth;
         (x > tmpX2) && (x = tmpX2);
 
-        const tmpY1 = visibleSideHeight - entityHeight;
+        const tmpY1 = visibleSideHeight - height;
         (y < tmpY1) && (y = tmpY1);
 
         const tmpY2 = containerHeight - visibleSideHeight;
@@ -148,13 +155,13 @@ export default class Interaction {
         return { x, y };
     } 
 
-    private initAction() {
+    private initAction(): void {
         const self = this;
         this.action = new Action({
             $target: this.$interaction,
             $wheelTarget: this.$container,
             initScaleValue: this.initScaleValue,
-            onPointerDown (device, state, ev) {
+            onPointerDown (device, state, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
                 }
@@ -167,7 +174,7 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onScale (device, state, ev) {
+            onScale (device, state, ev: MouseEvent) {
 
                 const rect = self.$interaction.getBoundingClientRect();
                 const offsetX = ev.pageX - rect.left;
@@ -175,18 +182,18 @@ export default class Interaction {
                 
                 self.scale(state.scaleValue, state.beforeScaleValue, offsetX, offsetY);
             },
-            onPan (device, state, ev) {
+            onPan (device, state, ev: MouseEvent) {
                 const movable = self.isMovable();
                 if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
                     self.pan(state.deltaX, state.deltaY);
                 }
             },
-            onKeyDown (device, state, ev) {
+            onKeyDown (device, state, ev: KeyboardEvent) {
                 if (device.spaceKey && !device.isMouseLeftButtonDown) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
                 }
             },
-            onKeyUp(device, state, ev) {
+            onKeyUp(device, state, ev: KeyboardEvent) {
                 self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
             }
         });

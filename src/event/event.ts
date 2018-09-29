@@ -1,23 +1,23 @@
 'use strict'
 
 class Event {
-    private events;
-    public CANVAS_TRANSFORM = 'canvas_transform';
-    public SCOPE_PAN = 'scope_pan';
-    public SCOPE_SCALE = 'scope_scale'
+    private events: any;
+    public CANVAS_TRANSFORM: string = 'canvas_transform';
+    public SCOPE_PAN: string = 'scope_pan';
+    public SCOPE_SCALE: string = 'scope_scale'
 
     constructor () {
         this.events = {};
     }
 
-    on (evt, callback) {
+    on (evt: string, callback: Function): void {
         let evts = this.events[evt] = this.events[evt] || [];
-        callback && evts.push(callback);
+        evts.push(callback);
     }
 
-    trigger (evt, data) {
-        const evts = this.events[evt];
-        evts && evts.forEach((callback) => {
+    trigger (evt: string, data: any): void {
+        const callbacks = this.events[evt];
+        callbacks && callbacks.forEach((callback) => {
             callback && callback(data);
         });
     }    

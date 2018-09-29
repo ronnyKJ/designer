@@ -1,42 +1,46 @@
-import utils from '../utils/utils';
+'use strict'
 
-const POINTER_DOWN = 'mousedown';
-const POINTER_MOVE = 'mousemove';
-const POINTER_UP = 'mouseup';
-const POINT_CLICK = 'click';
-const WHEEL = 'wheel';
-const KEY_DOWN = 'keydown';
-const KEY_UP = 'keyup';
-const KEY_PRESS = 'keypress';
-const CURSOR_DEFAULT = 'default';
-const CURSOR_GRAB = '-webkit-grab';
-const CURSOR_GRABBING = '-webkit-grabbing';
-const TRACKPAD_PAN_RATE = -1;
-const TRACKPAD_PINCH_RATE = 12;
-const MAX_WHEEL_VALUE = 10000;
-const MIN_WHEEL_VALUE = 100;
-const WHEEL_SCALE_RATE = 1000;
+import utils from '../utils/utils';
+import IActionConfig from '../interface/actionConfig.interface';
+
+const POINTER_DOWN: string = 'mousedown';
+const POINTER_MOVE: string = 'mousemove';
+const POINTER_UP: string = 'mouseup';
+const POINT_CLICK: string = 'click';
+const WHEEL: string = 'wheel';
+const KEY_DOWN: string = 'keydown';
+const KEY_UP: string = 'keyup';
+const KEY_PRESS: string = 'keypress';
+const CURSOR_DEFAULT: string = 'default';
+const CURSOR_GRAB: string = '-webkit-grab';
+const CURSOR_GRABBING: string = '-webkit-grabbing';
+const TRACKPAD_PAN_RATE: number = -1;
+const TRACKPAD_PINCH_RATE: number = 12;
+const MAX_WHEEL_VALUE: number = 10000;
+const MIN_WHEEL_VALUE: number = 100;
+const WHEEL_SCALE_RATE: number = 1000;
 
 export default class Action {
-    public static POINTER_DOWN = POINTER_DOWN;
-    public static POINTER_MOVE = POINTER_MOVE;
-    public static POINTER_UP = POINTER_UP;
-    public static POINT_CLICK = POINT_CLICK;
-    public static WHEEL = WHEEL;
-    public static KEY_DOWN = KEY_DOWN;
-    public static KEY_UP = KEY_UP;
-    public static KEY_PRESS = KEY_PRESS;
-    public static CURSOR_DEFAULT = CURSOR_DEFAULT;
-    public static CURSOR_GRAB = CURSOR_GRAB;
-    public static CURSOR_GRABBING = CURSOR_GRABBING;
+    public static POINTER_DOWN: string = POINTER_DOWN;
+    public static POINTER_MOVE: string = POINTER_MOVE;
+    public static POINTER_UP: string = POINTER_UP;
+    public static POINT_CLICK: string = POINT_CLICK;
+    public static WHEEL: string = WHEEL;
+    public static KEY_DOWN: string = KEY_DOWN;
+    public static KEY_UP: string = KEY_UP;
+    public static KEY_PRESS: string = KEY_PRESS;
+    public static CURSOR_DEFAULT: string = CURSOR_DEFAULT;
+    public static CURSOR_GRAB: string = CURSOR_GRAB;
+    public static CURSOR_GRABBING: string = CURSOR_GRABBING;
 
-    private $target;
-    private $wheelTarget;
-    private state;
+    private $target: HTMLElement;
+    private $wheelTarget: HTMLElement;
+
+    public state;
     private device;
     private config;
     
-    constructor (config) {
+    constructor (config: IActionConfig) {
         this.config = config || {};
         this.config.cursor = this.config.cursor || {}; 
 
@@ -79,14 +83,14 @@ export default class Action {
         };
 
         let self = this;
-        function wrap (callback) {
-            return function (ev) {
+        function wrap (callback: Function) {
+            return function (ev: any) {
                 if ([POINTER_DOWN, POINTER_MOVE, POINTER_UP, POINT_CLICK].indexOf(ev.type) >= 0) {
                     ev.preventDefault();
                     self.setMouseAttributes(device, ev);
                 } else if ([WHEEL].indexOf(ev.type) >= 0) {
                     ev.preventDefault();
-                    self.setMouseAttributes(device, ev);
+                    self.setWheelAttributes(device, ev);
                     self.setKeyboardAttributes(device, ev);
                 } else if ([KEY_DOWN, KEY_UP, KEY_PRESS].indexOf(ev.type) >= 0) {
                     self.setKeyboardAttributes(device, ev);
@@ -96,40 +100,41 @@ export default class Action {
             }
         }
 
-        const pointerMoveHandler = wrap((device, state, ev) => {
+        const pointerDownHandler = wrap((device, state, ev: MouseEvent) => {
+            this.onPointerDown(device, state, ev);
+
+            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
+            window.addEventListener(POINTER_UP, pointerUpHandler, false);
+        });
+
+        const pointerMoveHandler = wrap((device, state, ev: MouseEvent) => {
             this.onPointerMove(device, state, ev);
         });
 
-        const pointerUpHandler = wrap((device, state, ev) => {
+        const pointerUpHandler = wrap((device, state, ev: MouseEvent) => {
             this.onPointerUp(device, state, ev);
 
             window.removeEventListener(POINTER_MOVE, pointerMoveHandler);
             window.removeEventListener(POINTER_UP, pointerUpHandler);
         });
 
-        const pointerDownHandler = wrap((device, state, ev) => {
-            this.onPointerDown(device, state, ev);
-
-            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
-            window.addEventListener(POINTER_UP, pointerUpHandler, false);
-        });
         this.$target.addEventListener(POINTER_DOWN, pointerDownHandler, false);
 
-        window.addEventListener(KEY_DOWN, wrap((device, state, ev) => {            
+        window.addEventListener(KEY_DOWN, wrap((device, state, ev: KeyboardEvent) => {            
             this.onKeyDown(device, state, ev);
         }), false);
 
-        window.addEventListener(KEY_UP, wrap((device, state, ev) => {
+        window.addEventListener(KEY_UP, wrap((device, state, ev: KeyboardEvent) => {
             this.onKeyUp(device, state, ev);
         }), false);
         
-        const wheelHandler = wrap((device, state, ev) => {
+        const wheelHandler = wrap((device, state, ev: WheelEvent) => {
             this.onWheel(device, state, ev);
         });
         this.$wheelTarget.addEventListener(WHEEL, wheelHandler, false);
     }
 
-    onPointerDown(device, state, ev) {
+    private onPointerDown(device, state, ev: MouseEvent): void {
         // ev.pageY === ev.y
         // ev.layerY 相对于父容器
         // ev.pageY 相对于页面
@@ -146,7 +151,7 @@ export default class Action {
         this.config.onPointerDown && this.config.onPointerDown(device, state, ev);
     }
 
-    onPointerMove(device, state, ev) {
+    private onPointerMove(device, state, ev: MouseEvent): void {
         state.deltaX = device.pageX - state.startX;
         state.deltaY = device.pageY - state.startY;
 
@@ -160,7 +165,7 @@ export default class Action {
         state.startY = device.pageY;
     }
 
-    onPointerUp(device, state, ev) {
+    private onPointerUp(device, state, ev: MouseEvent): void {
         const pointerUpCursor = this.config.cursor.pointerUp;
         if (pointerUpCursor && !device.isMouseLeftButtonDown) {
             this.$target.style.cursor = pointerUpCursor;
@@ -168,7 +173,7 @@ export default class Action {
         this.config.onPointerUp && this.config.onPointerUp(device, state, ev);
     }
 
-    onWheel(device, state, ev) {
+    private onWheel(device, state, ev: MouseEvent): void {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
@@ -188,24 +193,24 @@ export default class Action {
         this.config.onWheel && this.config.onWheel(device, state, ev);
     }
 
-    onKeyDown(device, state, ev) {
+    private onKeyDown(device, state, ev: KeyboardEvent): void {
         this.config.onKeyDown && this.config.onKeyDown(device, state, ev);
     }
 
-    onKeyUp(device, state, ev) {
+    private onKeyUp(device, state, ev: KeyboardEvent): void {
         this.config.onKeyUp && this.config.onKeyUp(device, state, ev);
     }
 
-    onScale (device, state, ev) {
+    private onScale (device, state, ev: MouseEvent): void {
         this.config.onScale && this.config.onScale(device, state, ev);
     }
 
-    onPan (device, state, ev) {
+    private onPan (device, state, ev: MouseEvent): void {
         this.config.onPan && this.config.onPan(device, state, ev);
     }
 
     // 键盘事件属性
-    setKeyboardAttributes(device, ev) {
+    private setKeyboardAttributes(device, ev: KeyboardEvent): void {
         device.keyCode = ev.keyCode;
 
         device.altKey = ev.altKey;
@@ -219,8 +224,8 @@ export default class Action {
         }
     }
 
-    // 鼠标事件属性
-    setMouseAttributes(device, ev) {
+    // 鼠标点击事件属性
+    private setMouseAttributes(device, ev: MouseEvent): void {
         if (ev.type === POINTER_UP) {
             device.isMouseLeftButtonDown = false;
             device.mouseButtonCode = -1;
@@ -232,12 +237,15 @@ export default class Action {
             }
         }
 
+        device.pageX = ev.pageX;
+        device.pageY = ev.pageY;
+    }
+
+    // 鼠标滚动事件属性
+    private setWheelAttributes(device, ev: WheelEvent): void {
         device.wheelDeltaX = ev.wheelDeltaX;
         device.wheelDeltaY = ev.wheelDeltaY;
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
-        device.keyCode = ev.keyCode;
-        device.pageX = ev.pageX;
-        device.pageY = ev.pageY;
-    }         
+    }    
 }

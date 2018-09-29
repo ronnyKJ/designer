@@ -3,19 +3,20 @@
 import Interaction from '../interaction/interaction.class';
 import Canvas from '../canvas/canvas.class';
 import Navigator from '../navigator/navigator.class';
+import IDesignerOptions from '../interface/designerConfig.interface';
 
 export default class Designer {
-    constructor ($container, options) {
+    constructor ($container:HTMLElement, config: IDesignerOptions) {
         
-        let interaction = new Interaction($container, options); // 单例
-        let canvas = new Canvas($container, interaction, options); // 允许多例
+        let interaction: Interaction = new Interaction($container, config); // 单例
+        let canvas: Canvas = new Canvas($container, interaction, config); // 允许多例
 
-        if (options.$navigator) {
-            let navigator = new Navigator(options.$navigator, {
+        if (config.$navigator) {
+            let navigator: Navigator = new Navigator(config.$navigator, {
                 $container: $container,
                 $interaction: interaction.$interaction,
-                initCanvasWidth: options.canvasWidth,
-                initCanvasHeight: options.canvasHeight
+                canvasOriginWidth: config.canvasOriginWidth,
+                canvasOriginHeight: config.canvasOriginHeight
             });
         }
 

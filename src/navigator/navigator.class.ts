@@ -3,6 +3,7 @@
 import * as styles from './navigator.less';
 import Action from '../action/action.class';
 import Event from '../event/event';
+import INavigatorOptions from '../interface/navigatorConfig.interface';
 
 export default class Navigator {
     private $navigator;
@@ -12,7 +13,7 @@ export default class Navigator {
     private $scope;
     private $slider;
     
-    constructor ($dom, config) {
+    constructor ($dom, config: INavigatorOptions) {
         $dom.innerHTML = `
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
@@ -41,7 +42,7 @@ export default class Navigator {
 
         this.panScope();
 
-        this.$slider.addEventListener('input', (ev) => {
+        this.$slider.addEventListener('input', (ev: KeyboardEvent) => {
             Event.trigger(Event.SCOPE_SCALE, this.$slider.value);            
         }, false);
     }

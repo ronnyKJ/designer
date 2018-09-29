@@ -3,15 +3,16 @@
 import Interaction from '../interaction/interaction.class';
 import * as styles from './canvas.less';
 import utils from '../utils/utils';
+import IDesignerConfig from '../interface/designerConfig.interface';
 
-export default class Renderer {
-    private $container: Element;
-    private $canvas: Element;
+export default class Canvas {
+    private $container: HTMLElement;
+    private $canvas: HTMLElement;
     private interaction: Interaction;
-    private width;
-    private height;
+    private width: number;
+    private height: number;
 
-    constructor ($container, interaction, options) {
+    constructor ($container: HTMLElement, interaction: Interaction, config: IDesignerConfig) {
         this.$container = $container;
         this.interaction = interaction;
         this.$canvas = $container.querySelector(`.${styles.canvas}`);
@@ -24,8 +25,7 @@ export default class Renderer {
             top: interRect.y + 'px'
         });
 
-        options = options || {};
-        this.width = options.canvasWidth;
-        this.height = options.canvasHeight;
+        this.width = config.canvasOriginWidth;
+        this.height = config.canvasOriginHeight;
     }
 }
