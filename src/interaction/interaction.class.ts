@@ -7,16 +7,10 @@ import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IActionState from '../interface/actionState.interface';
+import IInteractionStyleInfo from '../interface/interactionStyle.interface';
 
 const KEEP_INSIDE: number = 0.2;
 const INIT_CANVAS_MAX_RATIO: number = 0.9; // 初始化canvas长边占容器对应边比例
-
-interface IStyleInfo {
-    x: number,
-    y: number,
-    width?: number,
-    height?: number
-}
 
 export default class Interaction {
     public $interaction: HTMLElement;
@@ -130,7 +124,7 @@ export default class Interaction {
         this.setStyle({x, y, width, height});
     }
 
-    private setStyle(info: IStyleInfo): void {
+    private setStyle(info: IInteractionStyleInfo): void {
         let style = this.$interaction.style;
         info.hasOwnProperty('width') && (style.width = `${info.width}px`);
         info.hasOwnProperty('height') && (style.height = `${info.height}px`);
