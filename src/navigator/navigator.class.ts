@@ -18,10 +18,12 @@ export default class Navigator {
     private $minBtn: HTMLInputElement;
     private $maxBtn: HTMLInputElement;
     private interaction: Interaction;
+    private data: IData;
     
     constructor (data: IData, interaction: Interaction, config: IDesignerConfig) {
-        let $dom = config.$navigator;
+        this.data = data;
 
+        let $dom = config.$navigator;
         $dom.innerHTML = `
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
@@ -161,8 +163,8 @@ export default class Navigator {
                     const thumbnailHeight = self.$thumbnail.offsetHeight;
 
                     const $in = self.interaction.$interaction;
-                    let tmpX = -state.deltaX / thumbnailWidth * $in.offsetWidth;
-                    let tmpY = -state.deltaY / thumbnailHeight * $in.offsetHeight;
+                    let tmpX = -self.data.deltaX / thumbnailWidth * $in.offsetWidth;
+                    let tmpY = -self.data.deltaY / thumbnailHeight * $in.offsetHeight;
 
                     if (thumbnailWidth === self.$scope.offsetWidth) {
                         tmpX = 0;

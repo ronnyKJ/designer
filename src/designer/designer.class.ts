@@ -17,12 +17,7 @@ export default class Designer {
             scaleValue: 1,
             beforeScaleValue: 1,
             dragging: false
-        };
-
-        // Watcher.register(state, 'scaleValue');
-        // Watcher.watch(state, 'scaleValue', function(newValue: number, oldValue: number){
-        //     console.log(newValue, oldValue);
-        // });        
+        };   
         
         let interaction: Interaction = new Interaction(data, config); // 单例
         let canvas: Canvas = new Canvas(data, interaction, config); // 允许多例

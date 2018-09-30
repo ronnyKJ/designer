@@ -5,7 +5,6 @@ import Event from '../utils/event';
 import Watcher from '../utils/watcher';
 import IActionConfig from '../interface/actionConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IActionState from '../interface/data.interface';
 import IPanInfo from '../interface/panInfo.interface';
 
 const POINTER_DOWN: string = 'mousedown';
@@ -45,7 +44,7 @@ export default class Action {
     private $target: HTMLElement;
     private $wheelTarget: HTMLElement;
 
-    public state: IActionState;
+    private state: any;
     private device: IActionDevice;
     private config: IActionConfig;
     
@@ -69,6 +68,7 @@ export default class Action {
             metaKey: false,
             ctrlKey: false,
             spaceKey: false,
+            dragging: false,
             isMouseLeftButtonDown: false,
             mouseButtonCode: -1, // -1 没有点击， 0左键 1中键 2右键 需要确认下兼容性问题
             wheelDeltaX: 0,
@@ -82,6 +82,11 @@ export default class Action {
             deltaY: 0
         };
         let device: IActionDevice = this.device;
+
+        this.state = {
+            startX: 0,
+            startY: 0
+        };
 
         let self = this;
         function wrap (callback: Function) {
@@ -149,6 +154,7 @@ export default class Action {
             this.$target.style.cursor = pointerDownCursor;
         }
 
+        let state = this.state;
         state.startX = device.pageX;
         state.startY = device.pageY;
 
@@ -156,12 +162,13 @@ export default class Action {
     }
 
     private onPointerMove(device: IActionDevice, ev: MouseEvent): void {
+        let state = this.state;
         state.deltaX = device.pageX - state.startX;
         state.deltaY = device.pageY - state.startY;
 
         this.config.onPointerMove && this.config.onPointerMove(device, ev);
         if (device.isMouseLeftButtonDown) {
-            state.dragging = true;
+            device.dragging = true;
             this.config.onPan && this.config.onPan(device, ev);
         }
 
@@ -181,16 +188,13 @@ export default class Action {
         // mac trackpad 双指平移: ev.deltaY * -3 === ev.wheelDeltaY
         // mac trackpad 双指缩放 与 鼠标滚轮 相同: ev.deltaY 为浮点数, ev.wheelDeltaY 为 120 倍数
         if (device.ctrlKey) { // 缩放 ctrl+滚动
-            state.beforeScaleValue = state.scaleValue;
-            state.scaleValue -= device.deltaY * TRACKPAD_PINCH_RATE / WHEEL_SCALE_RATE;
-            state.scaleValue = utils.range(state.scaleValue, MIN_SCALE_VALUE, MAX_SCALE_VALUE); // 约束
-            this.onScale(device, ev);
+            const deltaScaleValue = device.deltaY * TRACKPAD_PINCH_RATE / WHEEL_SCALE_RATE;
+            this.onScale(deltaScaleValue, device, ev);
         } else { // 平移
-            const rate = TRACKPAD_PAN_RATE;
-            state.deltaX = device.deltaX / rate;
-            state.deltaY = device.deltaY / rate;
-            state.dragging = false;
-            this.onPan(device, ev);
+            const deltaX = device.deltaX / TRACKPAD_PAN_RATE;
+            const deltaY = device.deltaY / TRACKPAD_PAN_RATE;
+            device.dragging = false;
+            this.onPan(deltaX, deltaY, device, ev);
         }
 
         this.config.onWheel && this.config.onWheel(device, ev);
@@ -204,12 +208,12 @@ export default class Action {
         this.config.onKeyUp && this.config.onKeyUp(device, ev);
     }
 
-    private onScale (device: IActionDevice, ev: MouseEvent): void {
-        this.config.onScale && this.config.onScale(device, ev);
+    private onScale (deltaScaleValue: number, device: IActionDevice, ev: MouseEvent): void {
+        this.config.onScale && this.config.onScale(deltaScaleValue, device, ev);
     }
 
-    private onPan (device: IActionDevice, ev: MouseEvent): void {
-        this.config.onPan && this.config.onPan(device, ev);
+    private onPan (deltaX: number, deltaY: number, device: IActionDevice, ev: MouseEvent): void {
+        this.config.onPan && this.config.onPan(deltaX, deltaY, device, ev);
     }
 
     // 键盘事件属性

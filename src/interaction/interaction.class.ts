@@ -19,9 +19,10 @@ export default class Interaction {
     private canvasOriginWidth: number;
     private canvasOriginHeight: number;
     public initScaleValue: number;
-    private action: Action;
+    private data: IData;
 
     constructor(data: IData, config: IDesignerConfig) {
+        this.data = data;
         this.movableWhenContained = config.movableWhenContained || true;
 
         this.$container = config.$container;
@@ -151,7 +152,7 @@ export default class Interaction {
 
     private initAction(): void {
         const self = this;
-        this.action = new Action({
+        new Action({
             $target: this.$interaction,
             $wheelTarget: this.$container,
             initScaleValue: this.initScaleValue,
@@ -168,7 +169,7 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onScale (device: IActionDevice, ev?: MouseEvent) {
+            onScale (deltaScaleValue: number, device?: IActionDevice, ev?: MouseEvent) {
 
                 const rect = self.$interaction.getBoundingClientRect();
 
@@ -182,13 +183,15 @@ export default class Interaction {
                     offsetY = self.$interaction.offsetHeight / 2;
                 }
 
-                
-                self.scale(state.scaleValue, state.beforeScaleValue, offsetX, offsetY);
+                let data = this.data;
+                data.beforeScaleValue = data.scaleValue;
+                data.scaleValue = data.scaleValue + deltaScaleValue;
+                self.scale(data.scaleValue, data.beforeScaleValue, offsetX, offsetY);
             },
-            onPan (device: IActionDevice, ev?: MouseEvent) {
+            onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
                 const movable = self.isMovable();
-                if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
-                    self.pan(state.deltaX, state.deltaY);
+                if ((device.dragging && device.spaceKey && movable) || (!device.dragging && movable)) { // 平移
+                    self.pan(deltaX, deltaY);
                 }
             },
             onKeyDown (device: IActionDevice, ev: KeyboardEvent) {
@@ -204,7 +207,7 @@ export default class Interaction {
 
     private isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
-        return !(this.movableWhenContained === false && this.action.state.scaleValue <= 1);
+        return !(this.movableWhenContained === false && this.data.scaleValue <= 1);
     }
 
 }
