@@ -2,11 +2,11 @@
 
 import * as styles from './interaction.less';
 import utils from '../utils/utils';
-import Event from '../event/event';
+import Event from '../utils/event';
 import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IActionState from '../interface/actionState.interface';
+import IData from '../interface/data.interface';
 import ICanvasRectInfo from '../interface/canvasRectInfo.interface';
 
 const KEEP_INSIDE: number = 0.2;
@@ -21,11 +21,11 @@ export default class Interaction {
     public initScaleValue: number;
     private action: Action;
 
-    constructor($container: HTMLElement, config: IDesignerConfig) {
+    constructor(data: IData, config: IDesignerConfig) {
         this.movableWhenContained = config.movableWhenContained || true;
 
-        this.$container = $container;
-        this.$interaction = $container.querySelector(`.${styles.interaction}`);
+        this.$container = config.$container;
+        this.$interaction = this.$container.querySelector(`.${styles.interaction}`);
 
         this.preventBrowserDefaultAction();
         this.initCanvas(config);
@@ -155,12 +155,12 @@ export default class Interaction {
             $target: this.$interaction,
             $wheelTarget: this.$container,
             initScaleValue: this.initScaleValue,
-            onPointerDown (device: IActionDevice, state: IActionState, ev: MouseEvent) {
+            onPointerDown (device: IActionDevice, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRABBING;
                 }
             },
-            onPointerUp (device: IActionDevice, state: IActionState, ev: MouseEvent) {
+            onPointerUp (device: IActionDevice, ev: MouseEvent) {
                 device.isMouseLeftButtonDown = false;
                 if (device.spaceKey) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
@@ -168,7 +168,7 @@ export default class Interaction {
                     self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
                 }
             },
-            onScale (device: IActionDevice, state: IActionState, ev?: MouseEvent) {
+            onScale (device: IActionDevice, ev?: MouseEvent) {
 
                 const rect = self.$interaction.getBoundingClientRect();
 
@@ -185,18 +185,18 @@ export default class Interaction {
                 
                 self.scale(state.scaleValue, state.beforeScaleValue, offsetX, offsetY);
             },
-            onPan (device: IActionDevice, state: IActionState, ev?: MouseEvent) {
+            onPan (device: IActionDevice, ev?: MouseEvent) {
                 const movable = self.isMovable();
                 if ((state.dragging && device.spaceKey && movable) || (!state.dragging && movable)) { // 平移
                     self.pan(state.deltaX, state.deltaY);
                 }
             },
-            onKeyDown (device: IActionDevice, state: IActionState, ev: KeyboardEvent) {
+            onKeyDown (device: IActionDevice, ev: KeyboardEvent) {
                 if (device.spaceKey && !device.isMouseLeftButtonDown) {
                     self.$interaction.style.cursor = Action.CURSOR_GRAB;
                 }
             },
-            onKeyUp(device: IActionDevice, state: IActionState, ev: KeyboardEvent) {
+            onKeyUp(device: IActionDevice, ev: KeyboardEvent) {
                 self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
             }
         });

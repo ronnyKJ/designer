@@ -15,10 +15,10 @@ export default class Canvas {
     private width: number;
     private height: number;
 
-    constructor ($container: HTMLElement, interaction: Interaction, config: IDesignerConfig) {
-        this.$container = $container;
+    constructor (data: any, interaction: Interaction, config: IDesignerConfig) {
+        this.$container = config.$container;
         this.interaction = interaction;
-        this.$canvas = $container.querySelector(`.${styles.canvas}`);
+        this.$canvas = this.$container.querySelector(`.${styles.canvas}`);
 
         const interRect = this.interaction.getInteractionRect();
         this.setStyle(interRect);

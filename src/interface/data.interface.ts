@@ -1,6 +1,6 @@
 'use strict'
 
-export default interface IState {
+export default interface IData {
     startX: number,
     startY: number,
     deltaX: number,

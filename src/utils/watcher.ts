@@ -1,7 +1,5 @@
 'use strict'
 
-import Event from './event';
-
 class Watcher {
     public mapping: Map<any, any>;
 

@@ -25,7 +25,8 @@ document.querySelector('#app').innerHTML = `
 <div class="${appStyles.navigator}"></div>
 `;
 
-new Designer(document.querySelector(`.${appStyles.container}`), {
+new Designer({
+    $container: document.querySelector(`.${appStyles.container}`),
     canvasOriginWidth: 400,
     canvasOriginHeight: 200,
     $navigator: document.querySelector(`.${appStyles.navigator}`)

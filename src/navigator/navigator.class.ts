@@ -4,9 +4,9 @@ import * as styles from './navigator.less';
 import Action from '../action/action.class';
 import Event from '../utils/event';
 import Interaction from '../interaction/interaction.class';
-import INavigatorConfig from '../interface/navigatorConfig.interface';
+import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IActionState from '../interface/actionState.interface';
+import IData from '../interface/data.interface';
 
 
 export default class Navigator {
@@ -19,7 +19,9 @@ export default class Navigator {
     private $maxBtn: HTMLInputElement;
     private interaction: Interaction;
     
-    constructor ($dom: HTMLElement, config: INavigatorConfig) {
+    constructor (data: IData, interaction: Interaction, config: IDesignerConfig) {
+        let $dom = config.$navigator;
+
         $dom.innerHTML = `
             <div class="${styles.navigator}">
                 <div class="${styles.thumbnail}">
@@ -40,7 +42,7 @@ export default class Navigator {
         this.$range = $dom.querySelector(`.${styles.range}`);
         this.$minBtn = $dom.querySelector(`.${styles.min}`);
         this.$maxBtn = $dom.querySelector(`.${styles.max}`);
-        this.interaction = config.interaction;
+        this.interaction = interaction;
         this.$range.value = this.interaction.initScaleValue.toString();
 
         this.containThumbnail();
@@ -153,7 +155,7 @@ export default class Navigator {
         const self = this;
         new Action({
             $target: this.$scope,
-            onPointerMove (device: IActionDevice, state: IActionState, ev: MouseEvent) {
+            onPointerMove (device: IActionDevice, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown) {
                     const thumbnailWidth = self.$thumbnail.offsetWidth;
                     const thumbnailHeight = self.$thumbnail.offsetHeight;
