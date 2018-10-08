@@ -2,11 +2,12 @@
 
 import * as styles from './navigator.less';
 import Action from '../action/action.class';
-import Event from '../utils/event';
+import Event from '../core/event';
+import Model from '../core/model.class';
 import Interaction from '../interaction/interaction.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IData from '../interface/data.interface';
+import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INPUT, POINT_CLICK, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
 
 
 export default class Navigator {
@@ -18,10 +19,10 @@ export default class Navigator {
     private $minBtn: HTMLInputElement;
     private $maxBtn: HTMLInputElement;
     private interaction: Interaction;
-    private data: IData;
+    private model: Model;
     
-    constructor (data: IData, interaction: Interaction, config: IDesignerConfig) {
-        this.data = data;
+    constructor (model: Model, interaction: Interaction, config: IDesignerConfig) {
+        this.model = model;
 
         let $dom = config.$navigator;
         $dom.innerHTML = `
@@ -45,7 +46,7 @@ export default class Navigator {
         this.$minBtn = $dom.querySelector(`.${styles.min}`);
         this.$maxBtn = $dom.querySelector(`.${styles.max}`);
         this.interaction = interaction;
-        this.$range.value = this.interaction.initScaleValue.toString();
+        this.$range.value = this.model.data.scaleValue.toString();
 
         this.containThumbnail();
         this.setThumnnail();
@@ -53,7 +54,9 @@ export default class Navigator {
         this.setVisibleScope();
 
         this.panScope();
-        this.bindEvent();   
+        this.bindEvent();
+
+        this.render();
     }
 
     bindEvent (): void {
@@ -62,16 +65,16 @@ export default class Navigator {
             this.setVisibleScope();
         });
 
-        this.$range.addEventListener(Action.INPUT, (ev: KeyboardEvent) => {
+        this.$range.addEventListener(INPUT, (ev: KeyboardEvent) => {
             Event.trigger(Event.CANVAS_SCALE, Number(this.$range.value));
         }, false);
 
-        this.$minBtn.addEventListener(Action.POINT_CLICK, (ev: MouseEvent) => {
-            Event.trigger(Event.CANVAS_SCALE, Action.MIN_SCALE_VALUE);            
+        this.$minBtn.addEventListener(POINT_CLICK, (ev: MouseEvent) => {
+            Event.trigger(Event.CANVAS_SCALE, MIN_SCALE_VALUE);            
         }, false);
         
-        this.$maxBtn.addEventListener(Action.POINT_CLICK, (ev: MouseEvent) => {
-            Event.trigger(Event.CANVAS_SCALE, Action.MAX_SCALE_VALUE);
+        this.$maxBtn.addEventListener(POINT_CLICK, (ev: MouseEvent) => {
+            Event.trigger(Event.CANVAS_SCALE, MAX_SCALE_VALUE);
         }, false);
     }
 
@@ -157,14 +160,14 @@ export default class Navigator {
         const self = this;
         new Action({
             $target: this.$scope,
-            onPointerMove (device: IActionDevice, ev: MouseEvent) {
+            onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
                 if (device.isMouseLeftButtonDown) {
                     const thumbnailWidth = self.$thumbnail.offsetWidth;
                     const thumbnailHeight = self.$thumbnail.offsetHeight;
 
                     const $in = self.interaction.$interaction;
-                    let tmpX = -self.data.deltaX / thumbnailWidth * $in.offsetWidth;
-                    let tmpY = -self.data.deltaY / thumbnailHeight * $in.offsetHeight;
+                    let tmpX = -deltaX / thumbnailWidth * $in.offsetWidth;
+                    let tmpY = -deltaY / thumbnailHeight * $in.offsetHeight;
 
                     if (thumbnailWidth === self.$scope.offsetWidth) {
                         tmpX = 0;
@@ -181,11 +184,17 @@ export default class Navigator {
                 }
             },
             cursor: {
-                pointerOver: Action.CURSOR_GRAB,
-                pointerDown: Action.CURSOR_GRABBING,
-                pointerUp: Action.CURSOR_GRAB
+                pointerOver: CURSOR_GRAB,
+                pointerDown: CURSOR_GRABBING,
+                pointerUp: CURSOR_GRAB
             }
         });
 
     }
+
+    private render () {
+        this.model.watch(['scaleValue'], (newValue: number, oldValue: number) => {
+            console.log(newValue, oldValue);
+        });        
+    }    
 }

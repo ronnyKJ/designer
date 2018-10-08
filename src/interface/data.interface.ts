@@ -1,11 +1,12 @@
+import { interaction } from "../interaction/interaction.less";
+
 'use strict'
 
 export default interface IData {
-    startX: number,
-    startY: number,
-    deltaX: number,
-    deltaY: number,
+    canvasOriginWidth: number,
+    canvasOriginHeight: number,
     scaleValue: number,
     beforeScaleValue: number,
-    dragging: boolean
+    interactionX: number,
+    interactionY: number,
 }

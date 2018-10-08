@@ -1,46 +1,24 @@
 'use strict'
 
-import utils from '../utils/utils';
-import Event from '../utils/event';
-import Watcher from '../utils/watcher';
+import Event from '../core/event';
 import IActionConfig from '../interface/actionConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IPanInfo from '../interface/panInfo.interface';
-
-const POINTER_DOWN: string = 'mousedown';
-const POINTER_MOVE: string = 'mousemove';
-const POINTER_UP: string = 'mouseup';
-const POINT_CLICK: string = 'click';
-const WHEEL: string = 'wheel';
-const KEY_DOWN: string = 'keydown';
-const KEY_UP: string = 'keyup';
-const KEY_PRESS: string = 'keypress';
-const INPUT: string = 'input';
-const CURSOR_DEFAULT: string = 'default';
-const CURSOR_GRAB: string = '-webkit-grab';
-const CURSOR_GRABBING: string = '-webkit-grabbing';
-const TRACKPAD_PAN_RATE: number = -1;
-const TRACKPAD_PINCH_RATE: number = 12;
-const WHEEL_SCALE_RATE: number = 1000;
-const MAX_SCALE_VALUE: number = 10;
-const MIN_SCALE_VALUE: number = 0.1;
+import { 
+    POINTER_DOWN,
+    POINTER_MOVE,
+    POINTER_UP, 
+    POINT_CLICK,
+    WHEEL,
+    KEY_DOWN, 
+    KEY_UP,
+    KEY_PRESS,
+    TRACKPAD_PAN_RATE,
+    TRACKPAD_PINCH_RATE,
+    WHEEL_SCALE_RATE
+} from '../core/config';
 
 export default class Action {
-    public static POINTER_DOWN: string = POINTER_DOWN;
-    public static POINTER_MOVE: string = POINTER_MOVE;
-    public static POINTER_UP: string = POINTER_UP;
-    public static POINT_CLICK: string = POINT_CLICK;
-    public static WHEEL: string = WHEEL;
-    public static KEY_DOWN: string = KEY_DOWN;
-    public static KEY_UP: string = KEY_UP;
-    public static KEY_PRESS: string = KEY_PRESS;
-    public static INPUT: string = INPUT;
-    public static CURSOR_DEFAULT: string = CURSOR_DEFAULT;
-    public static CURSOR_GRAB: string = CURSOR_GRAB;
-    public static CURSOR_GRABBING: string = CURSOR_GRABBING;
-    public static MAX_SCALE_VALUE: number = MAX_SCALE_VALUE;
-    public static MIN_SCALE_VALUE: number = MIN_SCALE_VALUE;
-
     private $target: HTMLElement;
     private $wheelTarget: HTMLElement;
 

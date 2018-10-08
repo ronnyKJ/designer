@@ -1,16 +1,15 @@
 'use strict'
 
 import * as styles from './interaction.less';
-import utils from '../utils/utils';
-import Event from '../utils/event';
+import utils from '../core/utils';
+import Model from '../core/model.class';
+import Event from '../core/event';
 import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IData from '../interface/data.interface';
 import ICanvasRectInfo from '../interface/canvasRectInfo.interface';
+import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING} from '../core/config';
 
-const KEEP_INSIDE: number = 0.2;
-const INIT_CANVAS_MAX_RATIO: number = 0.9; // 初始化canvas长边占容器对应边比例
 
 export default class Interaction {
     public $interaction: HTMLElement;
@@ -18,22 +17,21 @@ export default class Interaction {
     private movableWhenContained: boolean = true;
     private canvasOriginWidth: number;
     private canvasOriginHeight: number;
-    public initScaleValue: number;
-    private data: IData;
+    private model: Model;
 
-    constructor(data: IData, config: IDesignerConfig) {
-        this.data = data;
+    constructor(model: Model, config: IDesignerConfig) {
+        this.model = model;
         this.movableWhenContained = config.movableWhenContained || true;
 
         this.$container = config.$container;
         this.$interaction = this.$container.querySelector(`.${styles.interaction}`);
 
         this.preventBrowserDefaultAction();
-        this.initCanvas(config);
+        this.setInteractionRect(config);
         this.initAction();
     }
 
-    private initCanvas (config: IDesignerConfig): void {
+    private setInteractionRect (config: IDesignerConfig): void {
         const containerRect = this.$container.getBoundingClientRect();
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
@@ -58,7 +56,7 @@ export default class Interaction {
             initHeight = canvasOriginHeight;
         }        
 
-        this.initScaleValue = initWidth / canvasOriginWidth;
+        this.model.data.scaleValue = initWidth / canvasOriginWidth;
 
         utils.setStyle(this.$interaction, {
             width: initWidth + 'px',
@@ -80,7 +78,7 @@ export default class Interaction {
 
     private preventBrowserDefaultAction () {
         // 在容器上阻止网页默认操作，后退、缩放
-        this.$container.addEventListener(Action.WHEEL, (ev) => {
+        this.$container.addEventListener(WHEEL, (ev) => {
             ev.preventDefault();
         }, false);
     }
@@ -155,18 +153,17 @@ export default class Interaction {
         new Action({
             $target: this.$interaction,
             $wheelTarget: this.$container,
-            initScaleValue: this.initScaleValue,
             onPointerDown (device: IActionDevice, ev: MouseEvent) {
                 if (device.isMouseLeftButtonDown && device.spaceKey) {
-                    self.$interaction.style.cursor = Action.CURSOR_GRABBING;
+                    self.$interaction.style.cursor = CURSOR_GRABBING;
                 }
             },
             onPointerUp (device: IActionDevice, ev: MouseEvent) {
                 device.isMouseLeftButtonDown = false;
                 if (device.spaceKey) {
-                    self.$interaction.style.cursor = Action.CURSOR_GRAB;
+                    self.$interaction.style.cursor = CURSOR_GRAB;
                 } else {
-                    self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
+                    self.$interaction.style.cursor = CURSOR_DEFAULT;
                 }
             },
             onScale (deltaScaleValue: number, device?: IActionDevice, ev?: MouseEvent) {
@@ -183,9 +180,9 @@ export default class Interaction {
                     offsetY = self.$interaction.offsetHeight / 2;
                 }
 
-                let data = this.data;
+                let data = self.model.data;
                 data.beforeScaleValue = data.scaleValue;
-                data.scaleValue = data.scaleValue + deltaScaleValue;
+                data.scaleValue += deltaScaleValue;
                 self.scale(data.scaleValue, data.beforeScaleValue, offsetX, offsetY);
             },
             onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
@@ -196,18 +193,23 @@ export default class Interaction {
             },
             onKeyDown (device: IActionDevice, ev: KeyboardEvent) {
                 if (device.spaceKey && !device.isMouseLeftButtonDown) {
-                    self.$interaction.style.cursor = Action.CURSOR_GRAB;
+                    self.$interaction.style.cursor = CURSOR_GRAB;
                 }
             },
             onKeyUp(device: IActionDevice, ev: KeyboardEvent) {
-                self.$interaction.style.cursor = Action.CURSOR_DEFAULT;
+                self.$interaction.style.cursor = CURSOR_DEFAULT;
             }
         });
     }
 
     private isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
-        return !(this.movableWhenContained === false && this.data.scaleValue <= 1);
+        return !(this.movableWhenContained === false && this.model.data.scaleValue <= 1);
     }
 
+    private render () {
+        this.model.watch(['scaleValue'], (newValue: number, oldValue: number) => {
+            console.log(newValue, oldValue);
+        });        
+    }
 }

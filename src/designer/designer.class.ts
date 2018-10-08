@@ -5,26 +5,40 @@ import Canvas from '../canvas/canvas.class';
 import Navigator from '../navigator/navigator.class';
 import IDesignerOptions from '../interface/designerConfig.interface';
 import IData from '../interface/data.interface';
+import Model from '../core/model.class';
+import utils from '../core/utils';
+import { MIN_SCALE_VALUE, MAX_SCALE_VALUE } from '../core/config';
 
 export default class Designer {
     constructor (config: IDesignerOptions) {
 
         let data: IData = {
-            startX: 0,
-            startY: 0,
-            deltaX: 0,
-            deltaY: 0,
+            canvasOriginWidth: config.canvasOriginWidth,
+            canvasOriginHeight: config.canvasOriginHeight,
+
             scaleValue: 1,
             beforeScaleValue: 1,
-            dragging: false
-        };   
+            interactionX: 0,
+            interactionY: 0,
+
+        };
+
+        let model: Model = new Model({
+            data: data,
+            computed: {
+                scaleValue: {
+                    set (newValue: number) {
+                        return utils.range(newValue, MIN_SCALE_VALUE, MAX_SCALE_VALUE); // 约束
+                    }
+                }
+            }
+        });
         
-        let interaction: Interaction = new Interaction(data, config); // 单例
-        let canvas: Canvas = new Canvas(data, interaction, config); // 允许多例
+        let interaction: Interaction = new Interaction(model, config); // 单例
+        let canvas: Canvas = new Canvas(model, interaction, config); // 允许多例
 
         if (config.$navigator) {
-            let navigator: Navigator = new Navigator(data, interaction, config);
+            let navigator: Navigator = new Navigator(model, interaction, config);
         }
-
     }
 }

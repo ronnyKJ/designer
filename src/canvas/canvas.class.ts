@@ -2,10 +2,10 @@
 
 import Interaction from '../interaction/interaction.class';
 import * as styles from './canvas.less';
-import utils from '../utils/utils';
+import utils from '../core/utils';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import ICanvasStyle from '../interface/canvasRectInfo.interface';
-import Event from '../utils/event';
+import Event from '../core/event';
 
 
 export default class Canvas {
