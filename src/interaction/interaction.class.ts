@@ -19,8 +19,6 @@ export default class Interaction extends RX {
 
     constructor(model: Model, $dom: HTMLElement, config: IDesignerConfig) {
         super(model, $dom, config);
-
-
     }
 
     create (): void {

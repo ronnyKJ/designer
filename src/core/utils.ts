@@ -13,14 +13,18 @@ class Util {
 
     debounce (func: Function) {
         let timer: number;
+        // const setTimerFunc = setTimeout;
+        // const cancelTimerFunc = clearTimeout;
+        const setTimerFunc = requestAnimationFrame;
+        const cancelTimerFunc = cancelAnimationFrame;
         return function () {
             if (timer) {
-                clearTimeout(timer);
+                cancelTimerFunc(timer);
             }
             const args = Array.prototype.slice.call(arguments, 0);
-            timer = setTimeout(() => {
+            timer = setTimerFunc(() => {
                 func && func.apply(this, args);
-            }, 0);
+            });
         }
     }
 }
