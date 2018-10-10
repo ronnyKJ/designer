@@ -20,15 +20,15 @@ export default class Canvas {
         this.interaction = interaction;
         this.$canvas = this.$container.querySelector(`.${styles.canvas}`);
 
-        const interRect = this.interaction.getInteractionRect();
-        this.setStyle(interRect);
+        // const interRect = this.interaction.getInteractionRect();
+        // this.setStyle(interRect);
 
-        this.width = config.canvasOriginWidth;
-        this.height = config.canvasOriginHeight;
+        // this.width = config.canvasOriginWidth;
+        // this.height = config.canvasOriginHeight;
 
-        Event.on(Event.CANVAS_TRANSFORM, (rectInfo: ICanvasStyle) => {
-            this.setStyle(rectInfo);
-        });        
+        // Event.on(Event.CANVAS_TRANSFORM, (rectInfo: ICanvasStyle) => {
+        //     this.setStyle(rectInfo);
+        // });        
     }
 
     private setStyle (style: ICanvasStyle): void {

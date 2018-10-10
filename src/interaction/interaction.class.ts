@@ -1,43 +1,106 @@
 'use strict'
 
+import RX from '../core/rx.class';
 import * as styles from './interaction.less';
-import utils from '../core/utils';
 import Model from '../core/model.class';
-import Event from '../core/event';
 import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import ICanvasRectInfo from '../interface/canvasRectInfo.interface';
-import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING} from '../core/config';
+import IOriginState from '../interface/originState.interface';
+import IData from '../interface/data.interface';
+import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
 
 
-export default class Interaction {
-    public $interaction: HTMLElement;
-    private $container: HTMLElement;
+export default class Interaction extends RX {
+
     private movableWhenContained: boolean = true;
     private canvasOriginWidth: number;
     private canvasOriginHeight: number;
-    private model: Model;
 
-    constructor(model: Model, config: IDesignerConfig) {
-        this.model = model;
-        this.movableWhenContained = config.movableWhenContained || true;
+    constructor(model: Model, $dom: HTMLElement, config: IDesignerConfig) {
+        super(model, $dom, config);
 
-        this.$container = config.$container;
-        this.$interaction = this.$container.querySelector(`.${styles.interaction}`);
 
-        this.preventBrowserDefaultAction();
-        this.setInteractionRect(config);
-        this.initAction();
     }
 
-    private setInteractionRect (config: IDesignerConfig): void {
-        const containerRect = this.$container.getBoundingClientRect();
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+    create (): void {
+        this.$dom.innerHTML = `
+            <!-- <div class="${styles.adjuster}">
+                <div class="${styles.outline}" data-act="move"></div>
+                <div class="${styles.knob} ${styles.nw}" data-act="resize" data-point="nw"></div>
+                <div class="${styles.knob} ${styles.n}" data-act="resize" data-point="n"></div>
+                <div class="${styles.knob} ${styles.ne}" data-act="resize" data-point="ne"></div>
+                <div class="${styles.knob} ${styles.e}" data-act="resize" data-point="e"></div>
+                <div class="${styles.knob} ${styles.se}" data-act="resize" data-point="se"></div>
+                <div class="${styles.knob} ${styles.s}" data-act="resize" data-point="s"></div>
+                <div class="${styles.knob} ${styles.sw}" data-act="resize" data-point="sw"></div>
+                <div class="${styles.knob} ${styles.w}" data-act="resize" data-point="w"></div>
+            </div> -->
+        `;
 
-        const canvasOriginWidth = this.canvasOriginWidth = config.canvasOriginWidth;
-        const canvasOriginHeight = this.canvasOriginHeight = config.canvasOriginHeight;
+        this.preventBrowserDefaultAction();
+        this.initProperties();
+        this.init();
+        this.action();
+    }
+
+    updateView (): void {
+        this.transform();
+    }
+
+    private getOriginState(): IOriginState {
+        const {canvasOriginWidth, canvasOriginHeight} = this.model.data;
+        const {width, height} = this.$container.getBoundingClientRect();
+
+        return {
+            offsetX: (width - canvasOriginWidth) / 2,
+            offsetY: (height - canvasOriginHeight) / 2,
+            width: canvasOriginWidth,
+            height: canvasOriginHeight
+        };
+    }
+
+    private transform(): void {
+        const {
+            offsetX, offsetY, width, height
+        } = this.getState();
+
+        let style = this.$dom.style;
+        style.width = `${width}px`;
+        style.height = `${height}px`;
+        // 使用 translate 会变模糊
+        style.left = `${offsetX}px`;
+        style.top = `${offsetY}px`;
+    }
+
+    private getState (): any {
+        const {scale, translateX, translateY, originX, originY, canvasWidth, canvasHeight} = this.model.data;
+
+        const originState: IOriginState = this.getOriginState();
+        const deltaX = (scale - 1) * originX;
+        const deltaY = (scale - 1) * originY;
+        let x = originState.offsetX + translateX - deltaX;
+        let y = originState.offsetY + translateY - deltaY;
+
+        return {
+            offsetX: x, 
+            offsetY: y, 
+            width: canvasWidth,
+            height: canvasHeight
+        }
+    }
+
+    private initProperties (): void {
+        this.movableWhenContained = this.config.movableWhenContained || true;
+    }
+
+    private init (): void {
+        const containerRect = this.$container.getBoundingClientRect();
+        const {
+            width: containerWidth,
+            height: containerHeight
+        } = containerRect
+        const {canvasOriginWidth, canvasOriginHeight} = this.model.data;
 
         let initWidth;
         let initHeight;
@@ -56,24 +119,64 @@ export default class Interaction {
             initHeight = canvasOriginHeight;
         }        
 
-        this.model.data.scaleValue = initWidth / canvasOriginWidth;
+        this.model.data.scale = initWidth / canvasOriginWidth;
+    }
 
-        utils.setStyle(this.$interaction, {
-            width: initWidth + 'px',
-            height: initHeight + 'px',
-            left: (containerWidth - initWidth) / 2 + 'px',
-            top: (containerHeight - initHeight) / 2 + 'px'
+    private action(): void {
+        const self = this;
+        new Action({
+            $target: this.$dom,
+            $wheelTarget: this.$container,
+            onPointerDown (device: IActionDevice, ev: MouseEvent) {
+                if (device.isMouseLeftButtonDown && device.spaceKey) {
+                    self.$dom.style.cursor = CURSOR_GRABBING;
+                }
+            },
+            onPointerUp (device: IActionDevice, ev: MouseEvent) {
+                device.isMouseLeftButtonDown = false;
+                if (device.spaceKey) {
+                    self.$dom.style.cursor = CURSOR_GRAB;
+                } else {
+                    self.$dom.style.cursor = CURSOR_DEFAULT;
+                }
+            },
+            onScale (deltaScaleValue: number, device?: IActionDevice, ev?: MouseEvent) {
+
+                const rect = self.$dom.getBoundingClientRect();
+
+                let originXRate;
+                let originYRate;
+                if (ev) {
+                    originXRate = (ev.pageX - rect.left) / rect.width;
+                    originYRate = (ev.pageY - rect.top) / rect.height;
+                } else {
+                    originXRate = 0.5;
+                    originYRate = 0.5;
+                }
+
+                self.scale(self.model.data.scale + deltaScaleValue, originXRate, originYRate);
+            },
+            onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
+                const movable = self.isMovable();
+                if ((device.dragging && device.spaceKey && movable) || (!device.dragging && movable)) { // 平移
+                    self.pan(deltaX, deltaY);
+                }
+            },
+            onKeyDown (device: IActionDevice, ev: KeyboardEvent) {
+                if (device.spaceKey && !device.isMouseLeftButtonDown) {
+                    self.$dom.style.cursor = CURSOR_GRAB;
+                }
+            },
+            onKeyUp(device: IActionDevice, ev: KeyboardEvent) {
+                self.$dom.style.cursor = CURSOR_DEFAULT;
+            }
         });
     }
 
-    public getInteractionRect () {
-        const $in = this.$interaction
-        return {
-            width: $in.offsetWidth,
-            height: $in.offsetHeight,
-            x: $in.offsetLeft,
-            y: $in.offsetTop
-        };
+    watch (): void {
+        this.model.watch(['scale', 'originX', 'originY', 'translateX', 'translateY'], (newValue: number, oldValue: number) => {
+            this.updateView();
+        });        
     }
 
     private preventBrowserDefaultAction () {
@@ -83,56 +186,51 @@ export default class Interaction {
         }, false);
     }
 
-    private pan(offsetX: number, offsetY: number) {
-        const $in = this.$interaction;
+    private pan(deltaX: number, deltaY: number) {
+        let data = this.model.data;
+        data.translateX += deltaX;
+        data.translateY += deltaY;
         
-        let x = $in.offsetLeft + offsetX;
-        let y = $in.offsetTop + offsetY;
-
-        const tmp = this.keepVisible(x, y, $in.offsetWidth, $in.offsetHeight);
-        x = tmp.x;
-        y = tmp.y;
-
-        this.setStyle({ x, y });
+        this.keepVisible();
     }
 
-    private scale (scaleValue: number, beforeScaleValue: number, originX?: number, originY?: number): void {
-        const $in = this.$interaction;
-        const width = this.canvasOriginWidth * scaleValue;
-        const height = this.canvasOriginHeight * scaleValue;
-
-        if (!originX) {
-            originX = $in.offsetWidth / 2;
+    private scale (newScaleValue: number, originXRate?: number, originYRate?: number): void {
+        if (!originXRate) {
+            originXRate = 0.5;
         }
 
-        if (!originY) {
-            originY = $in.offsetHeight / 2;
+        if (!originYRate) {
+            originYRate = 0.5;
         }
 
-        const x = $in.offsetLeft - (scaleValue / beforeScaleValue - 1) * originX;
-        const y = $in.offsetTop - (scaleValue / beforeScaleValue - 1) * originY;
+        const {offsetLeft, offsetTop} = this.$dom;
 
-        this.setStyle({x, y, width, height});
-    }
+        let data = this.model.data;
+        const {scale: beforeScale, canvasOriginWidth, canvasOriginHeight} = data;
+        data.scale = newScaleValue;
+        data.originX = canvasOriginWidth * originXRate;
+        data.originY = canvasOriginHeight * originYRate;
 
-    private setStyle(info: ICanvasRectInfo): void {
-        let style = this.$interaction.style;
-        info.hasOwnProperty('width') && (style.width = `${info.width}px`);
-        info.hasOwnProperty('height') && (style.height = `${info.height}px`);
-        // 使用 translate 会变模糊
-        info.hasOwnProperty('x') && (style.left = `${info.x}px`);
-        info.hasOwnProperty('y') && (style.top = `${info.y}px`);
-
-        Event.trigger(Event.CANVAS_TRANSFORM, info);
-    }
-
-    private keepVisible(x: number, y: number, width: number, height: number) {
         const containerRect = this.$container.getBoundingClientRect();
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+        data.translateX = offsetLeft + canvasOriginWidth * originXRate * (beforeScale - 1) + canvasOriginWidth / 2 - containerRect.width / 2;
+        data.translateY = offsetTop + canvasOriginHeight * originYRate * (beforeScale - 1) + canvasOriginHeight / 2 - containerRect.height / 2;
+
+        this.keepVisible();
+    }
+
+    private keepVisible() {
+        let {offsetX: x, offsetY: y, width, height} = this.getState();
+
+        const {
+            width: containerWidth,
+            height: containerHeight
+        } = this.$container.getBoundingClientRect();
         const visibleSideWidth = containerWidth * KEEP_INSIDE;
         const visibleSideHeight = containerHeight * KEEP_INSIDE;
         
+        const originX = x;
+        const originY = y;
+
         const tmpX1 = visibleSideWidth - width;
         (x < tmpX1) && (x = tmpX1);
 
@@ -145,71 +243,17 @@ export default class Interaction {
         const tmpY2 = containerHeight - visibleSideHeight;
         (y > tmpY2) && (y = tmpY2);
 
-        return { x, y };
-    } 
 
-    private initAction(): void {
-        const self = this;
-        new Action({
-            $target: this.$interaction,
-            $wheelTarget: this.$container,
-            onPointerDown (device: IActionDevice, ev: MouseEvent) {
-                if (device.isMouseLeftButtonDown && device.spaceKey) {
-                    self.$interaction.style.cursor = CURSOR_GRABBING;
-                }
-            },
-            onPointerUp (device: IActionDevice, ev: MouseEvent) {
-                device.isMouseLeftButtonDown = false;
-                if (device.spaceKey) {
-                    self.$interaction.style.cursor = CURSOR_GRAB;
-                } else {
-                    self.$interaction.style.cursor = CURSOR_DEFAULT;
-                }
-            },
-            onScale (deltaScaleValue: number, device?: IActionDevice, ev?: MouseEvent) {
+        const diffX = x - originX;
+        const diffY = y - originY;
 
-                const rect = self.$interaction.getBoundingClientRect();
-
-                let offsetX;
-                let offsetY;
-                if (ev) {
-                    offsetX = ev.pageX - rect.left;
-                    offsetY = ev.pageY - rect.top;
-                } else {
-                    offsetX = self.$interaction.offsetWidth / 2;
-                    offsetY = self.$interaction.offsetHeight / 2;
-                }
-
-                let data = self.model.data;
-                data.beforeScaleValue = data.scaleValue;
-                data.scaleValue += deltaScaleValue;
-                self.scale(data.scaleValue, data.beforeScaleValue, offsetX, offsetY);
-            },
-            onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
-                const movable = self.isMovable();
-                if ((device.dragging && device.spaceKey && movable) || (!device.dragging && movable)) { // 平移
-                    self.pan(deltaX, deltaY);
-                }
-            },
-            onKeyDown (device: IActionDevice, ev: KeyboardEvent) {
-                if (device.spaceKey && !device.isMouseLeftButtonDown) {
-                    self.$interaction.style.cursor = CURSOR_GRAB;
-                }
-            },
-            onKeyUp(device: IActionDevice, ev: KeyboardEvent) {
-                self.$interaction.style.cursor = CURSOR_DEFAULT;
-            }
-        });
+        let data = this.model.data;
+        data.translateX += diffX;
+        data.translateY += diffY;
     }
 
     private isMovable(): boolean {
         // interaction 小于容器，且配置 movableWhenContained 为 false，不能移动；其余状况能移动
-        return !(this.movableWhenContained === false && this.model.data.scaleValue <= 1);
-    }
-
-    private render () {
-        this.model.watch(['scaleValue'], (newValue: number, oldValue: number) => {
-            console.log(newValue, oldValue);
-        });        
+        return !(this.movableWhenContained === false && this.model.data.scale <= 1);
     }
 }

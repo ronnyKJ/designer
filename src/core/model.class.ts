@@ -73,7 +73,8 @@ class Model {
     }
 
     public watch (props: Array<string>, callback: Function): void {
-        let dCallback = utils.debounce(callback);
+        // let dCallback = utils.debounce(callback); // 加这一行在开始的时候反而会发生卡顿，经过几次平移之后就好了
+        let dCallback = callback;
 
         props.forEach((prop) => {
             this.queues[prop] = this.queues[prop] || [];
