@@ -6,7 +6,8 @@ import Action from '../action/action.class';
 import Model from '../core/model.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INPUT, POINT_CLICK, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
+import IData from '../interface/data.interface';
+import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, TEXT_INPUT, TEXT_CHANGE, POINT_CLICK, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
 
 
 export default class Navigator extends RX {
@@ -16,7 +17,8 @@ export default class Navigator extends RX {
     private $range: HTMLInputElement;
     private $minBtn: HTMLInputElement;
     private $maxBtn: HTMLInputElement;
-    
+    private $text: HTMLInputElement;
+
     constructor (model: Model, $dom: HTMLElement, config: IDesignerConfig) {
         super(model, $dom, config);
     }
@@ -32,6 +34,7 @@ export default class Navigator extends RX {
                     <input type="range" class="${styles.range}" max="10" min="0.1" defaultValue="1" step="0.1" />
                     <input type="button" class="${styles.max}" value="max" />
                 </div>
+                <input type="number" step="0.1" class="${styles.text}" value="${this.model.data.scale}" />
             </div>
         `;
 
@@ -48,17 +51,20 @@ export default class Navigator extends RX {
         this.$range = $dom.querySelector(`.${styles.range}`);
         this.$minBtn = $dom.querySelector(`.${styles.min}`);
         this.$maxBtn = $dom.querySelector(`.${styles.max}`);
+        this.$text = $dom.querySelector(`.${styles.text}`);
     }
 
     watch (): void {
-        this.model.watch(['scaleValue', 'interactionX', 'interactionY', 'interactionWidth', 'interactionHeight'], (newValue: number, oldValue: number) => {
+        this.model.watch(['scale', 'originX', 'originY', 'translateX', 'translateY'], (newValue: number, oldValue: number) => {
             this.updateView();
-        });        
+        });
     }
 
     updateView (): void {
         this.setVisibleScope();
-        this.$range.value = this.model.data.scaleValue.toString();
+        const scale = this.model.data.scale.toFixed(1);
+        this.$range.value = scale.toString();
+        this.$text.value = scale.toString();
     }
 
     private containThumbnail (): void {
@@ -66,9 +72,9 @@ export default class Navigator extends RX {
         const nw = rect.width;
         const nh = rect.height;
 
-        let data = this.model.data;
-        const tw = data.interactionWidth;
-        const th = data.interactionHeight;
+        let data: IData = this.model.data;
+        const tw = data.canvasOriginWidth;
+        const th = data.canvasOriginHeight;
 
         let style = this.$thumbnail.style;
         if (nw / nh > tw / th) {
@@ -92,23 +98,23 @@ export default class Navigator extends RX {
          * 缩略图相当于画布，可视范围框相当于画布的容器
          * 当可视范围框超出缩略图时，限制在缩略图范围内
          */
-        const $con = this.$container;
-        const data = this.model.data;
-        const $thumbnail = this.$thumbnail;
+        const {
+            offsetWidth: containerWidth,
+            offsetHeight: containerHeight
+        } = this.$container;
+        const {
+            canvasOriginWidth, canvasOriginHeight, interactionOffsetX, interactionOffsetY
+        } = this.model.data;
 
-        const containerWidth = $con.offsetWidth;
-        const containerHeight = $con.offsetHeight;
-        const interactionWidth = data.interactionWidth;
-        const interactionHeight = data.interactionHeight;
-        const interactionOffsetX = data.interactionX;
-        const interactionOffsetY = data.interactionY;
-        const thumbnailWidth = $thumbnail.offsetWidth;
-        const thumbnailHeight = $thumbnail.offsetHeight;
+        const {
+            offsetWidth: thumbnailWidth,
+            offsetHeight: thumbnailHeight
+        } = this.$thumbnail;
 
-        let scopeWidth = containerWidth / interactionWidth * thumbnailWidth;
-        let scopeHeight = containerHeight / interactionHeight * thumbnailHeight;
-        let scopeOffsetX = -interactionOffsetX / interactionWidth * thumbnailWidth;
-        let scopeOffsetY = -interactionOffsetY / interactionHeight * thumbnailHeight;
+        let scopeWidth = containerWidth / canvasOriginWidth * thumbnailWidth;
+        let scopeHeight = containerHeight / canvasOriginHeight * thumbnailHeight;
+        let scopeOffsetX = -interactionOffsetX / canvasOriginWidth * thumbnailWidth;
+        let scopeOffsetY = -interactionOffsetY / canvasOriginHeight * thumbnailHeight;
         
         // 以下对超出缩略图范围做限制
         if (scopeOffsetX + scopeWidth > thumbnailWidth) {
@@ -129,13 +135,11 @@ export default class Navigator extends RX {
             scopeOffsetY = 0;
         }
 
-
-
         let style = this.$scope.style;
-        style.width = scopeWidth + 'px';
-        style.height = scopeHeight + 'px';
-        style.left = scopeOffsetX + 'px';
-        style.top = scopeOffsetY + 'px';
+        style.width = `${scopeWidth}px`;
+        style.height = `${scopeHeight}px`;
+        style.left = `${scopeOffsetX}px`;
+        style.top = `${scopeOffsetY}px`;
     }
 
     private setThumbnail (): void {
@@ -175,15 +179,19 @@ export default class Navigator extends RX {
         });
 
         this.$minBtn.addEventListener(POINT_CLICK, (ev: MouseEvent) => {
-            this.model.data.scaleValue = MIN_SCALE_VALUE.toString();
+            this.model.data.scale = MIN_SCALE_VALUE.toString();
         });
 
         this.$maxBtn.addEventListener(POINT_CLICK, (ev: MouseEvent) => {
-            this.model.data.scaleValue = MAX_SCALE_VALUE.toString();
+            this.model.data.scale = MAX_SCALE_VALUE.toString();
         });
 
-        this.$range.addEventListener(INPUT, () => {
-            this.model.data.scaleValue = Number(this.$range.value);
+        this.$range.addEventListener(TEXT_INPUT, () => {
+            this.model.data.scale = Number(this.$range.value);
+        });
+
+        this.$text.addEventListener(TEXT_CHANGE, () => {
+            this.model.data.scale = Number(this.$text.value);
         });
     }
 }

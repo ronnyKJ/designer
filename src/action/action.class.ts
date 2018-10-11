@@ -3,7 +3,6 @@
 import Event from '../core/event';
 import IActionConfig from '../interface/actionConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IPanInfo from '../interface/panInfo.interface';
 import { 
     POINTER_DOWN,
     POINTER_MOVE,
@@ -118,7 +117,6 @@ export default class Action {
         });
         this.$wheelTarget.addEventListener(WHEEL, wheelHandler, false);
 
-        this.bindEvent();
     }
 
     private onPointerDown(device: IActionDevice, ev: MouseEvent): void {
@@ -147,7 +145,7 @@ export default class Action {
         this.config.onPointerMove && this.config.onPointerMove(device, ev);
         if (device.isMouseLeftButtonDown) {
             device.dragging = true;
-            this.config.onPan && this.config.onPan(device, ev);
+            this.config.onPan && this.config.onPan(state.deltaX, state.deltaY, device, ev);
         }
 
         state.startX = device.pageX;
@@ -232,19 +230,5 @@ export default class Action {
         device.wheelDeltaY = ev.wheelDeltaY;
         device.deltaX = ev.deltaX;
         device.deltaY = ev.deltaY;
-    }
-
-    private bindEvent (): void {
-        Event.on(Event.CANVAS_PAN, (panInfo: IPanInfo) => {
-            this.state.deltaX = panInfo.deltaX;
-            this.state.deltaY = panInfo.deltaY;
-            this.config.onPan && this.config.onPan(this.device, this.state);
-        });
-
-        Event.on(Event.CANVAS_SCALE, (scaleValue: number) => {
-            this.state.beforeScaleValue = this.state.scaleValue;
-            this.state.scaleValue = scaleValue;
-            this.config.onScale && this.config.onScale(this.device, this.state);
-        });
     }
 }

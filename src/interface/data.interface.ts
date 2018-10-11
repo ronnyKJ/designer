@@ -9,5 +9,7 @@ export default interface IData {
     originX: number,
     originY: number,
     canvasWidth: number, // readonly
-    canvasHeight: number // readonly
+    canvasHeight: number, // readonly
+    interactionOffsetX: number,
+    interactionOffsetY: number,
 }

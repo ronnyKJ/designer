@@ -26,6 +26,9 @@ export default class Designer {
             canvasWidth: config.canvasOriginWidth, // readonly
             canvasHeight: config.canvasOriginHeight, // readonly
 
+            interactionOffsetX: 0,
+            interactionOffsetY: 0,
+
         };
 
         let model: Model = new Model({
@@ -43,6 +46,12 @@ export default class Designer {
                 canvasHeight () {
                     const {canvasOriginHeight, scale} = this.data;
                     return canvasOriginHeight * scale;
+                },
+                interactionOffsetX () {
+                    return $interactionDom.offsetLeft;
+                },
+                interactionOffsetY () {
+                    return $interactionDom.offsetTop;
                 }
             }
         });
@@ -51,8 +60,8 @@ export default class Designer {
         let interaction: Interaction = new Interaction(model, $interactionDom, config); // 单例
         // let canvas: Canvas = new Canvas(model, interaction, config); // 允许多例
 
-        // if (config.$navigator) {
-        //     let navigator: Navigator = new Navigator(model, config.$navigator, config);
-        // }
+        if (config.$navigator) {
+            let navigator: Navigator = new Navigator(model, config.$navigator, config);
+        }
     }
 }

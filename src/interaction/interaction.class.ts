@@ -6,16 +6,13 @@ import Model from '../core/model.class';
 import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
-import IOriginState from '../interface/originState.interface';
-import IData from '../interface/data.interface';
-import { MAX_SCALE_VALUE, MIN_SCALE_VALUE, INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
+import IInteractionState from '../interface/interactionState.interface';
+import { INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
 
 
 export default class Interaction extends RX {
 
     private movableWhenContained: boolean = true;
-    private canvasOriginWidth: number;
-    private canvasOriginHeight: number;
 
     constructor(model: Model, $dom: HTMLElement, config: IDesignerConfig) {
         super(model, $dom, config);
@@ -46,18 +43,6 @@ export default class Interaction extends RX {
         this.transform();
     }
 
-    private getOriginState(): IOriginState {
-        const {canvasOriginWidth, canvasOriginHeight} = this.model.data;
-        const {width, height} = this.$container.getBoundingClientRect();
-
-        return {
-            offsetX: (width - canvasOriginWidth) / 2,
-            offsetY: (height - canvasOriginHeight) / 2,
-            width: canvasOriginWidth,
-            height: canvasOriginHeight
-        };
-    }
-
     private transform(): void {
         const {
             offsetX, offsetY, width, height
@@ -71,10 +56,10 @@ export default class Interaction extends RX {
         style.top = `${offsetY}px`;
     }
 
-    private getState (): any {
+    private getState (): IInteractionState {
         const {scale, translateX, translateY, originX, originY, canvasWidth, canvasHeight} = this.model.data;
 
-        const originState: IOriginState = this.getOriginState();
+        const originState: IInteractionState = this.getOriginState();
         const deltaX = (scale - 1) * originX;
         const deltaY = (scale - 1) * originY;
         let x = originState.offsetX + translateX - deltaX;
@@ -88,17 +73,28 @@ export default class Interaction extends RX {
         }
     }
 
+    private getOriginState(): IInteractionState {
+        const {canvasOriginWidth, canvasOriginHeight} = this.model.data;
+        const {width, height} = this.$container.getBoundingClientRect();
+
+        return {
+            offsetX: (width - canvasOriginWidth) / 2,
+            offsetY: (height - canvasOriginHeight) / 2,
+            width: canvasOriginWidth,
+            height: canvasOriginHeight
+        };
+    }
+
     private initProperties (): void {
         this.movableWhenContained = this.config.movableWhenContained || true;
     }
 
     private init (): void {
-        const containerRect = this.$container.getBoundingClientRect();
         const {
             width: containerWidth,
             height: containerHeight
-        } = containerRect
-        const {canvasOriginWidth, canvasOriginHeight} = this.model.data;
+        } = this.$container.getBoundingClientRect();
+        const { canvasOriginWidth, canvasOriginHeight } = this.model.data;
 
         let initWidth;
         let initHeight;
