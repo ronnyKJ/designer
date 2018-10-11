@@ -139,14 +139,13 @@ export default class Interaction extends RX {
                 }
             },
             onScale (deltaScaleValue: number, device?: IActionDevice, ev?: MouseEvent) {
-
-                const rect = self.$dom.getBoundingClientRect();
+                const {left, top, width, height} = self.$dom.getBoundingClientRect();
 
                 let originXRate;
                 let originYRate;
                 if (ev) {
-                    originXRate = (ev.pageX - rect.left) / rect.width;
-                    originYRate = (ev.pageY - rect.top) / rect.height;
+                    originXRate = (ev.pageX - left) / width;
+                    originYRate = (ev.pageY - top) / height;
                 } else {
                     originXRate = 0.5;
                     originYRate = 0.5;
@@ -201,17 +200,18 @@ export default class Interaction extends RX {
             originYRate = 0.5;
         }
 
-        const {offsetLeft, offsetTop} = this.$dom;
-
         let data = this.model.data;
-        const {scale: beforeScale, canvasOriginWidth, canvasOriginHeight} = data;
+        const { scale: beforeScale, canvasOriginWidth, canvasOriginHeight } = data;
         data.scale = newScaleValue;
         data.originX = canvasOriginWidth * originXRate;
         data.originY = canvasOriginHeight * originYRate;
 
-        const containerRect = this.$container.getBoundingClientRect();
-        data.translateX = offsetLeft + canvasOriginWidth * originXRate * (beforeScale - 1) + canvasOriginWidth / 2 - containerRect.width / 2;
-        data.translateY = offsetTop + canvasOriginHeight * originYRate * (beforeScale - 1) + canvasOriginHeight / 2 - containerRect.height / 2;
+        const { left, top, width, height } = this.$dom.getBoundingClientRect();
+        const { left: containerLeft, top: containerTop } = this.$container.getBoundingClientRect();
+        const { offsetX, offsetY, width: originWidth, height: originHeight } = this.getOriginState();
+        // 算出 origin 和 当前$dom 的 差值
+        data.translateX = (left + width * originXRate) - (containerLeft + offsetX + originWidth * originXRate);
+        data.translateY = (top + height * originYRate) - (containerTop + offsetY + originHeight * originYRate);
 
         this.keepVisible();
     }
