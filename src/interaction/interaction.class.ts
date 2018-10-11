@@ -7,7 +7,7 @@ import Action from '../action/action.class';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import IActionDevice from '../interface/actionDevice.interface';
 import IInteractionState from '../interface/interactionState.interface';
-import { INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING } from '../core/config';
+import { INIT_CANVAS_MAX_RATIO, KEEP_INSIDE, WHEEL, CURSOR_DEFAULT, CURSOR_GRAB, CURSOR_GRABBING, CONTEXTMENU } from '../core/config';
 
 
 export default class Interaction extends RX {
@@ -37,10 +37,6 @@ export default class Interaction extends RX {
         this.initProperties();
         this.init();
         this.action();
-    }
-
-    updateView (): void {
-        this.transform();
     }
 
     private transform(): void {
@@ -166,8 +162,17 @@ export default class Interaction extends RX {
         });
     }
 
+    beforeUpdateView (): void {
+        this.keepVisible();
+    }
+
+    updateView (): void {
+        this.transform();
+    }
+
     watch (): void {
         this.model.watch(['scale', 'originX', 'originY', 'translateX', 'translateY'], (newValue: number, oldValue: number) => {
+            this.beforeUpdateView();
             this.updateView();
         });        
     }
@@ -177,14 +182,16 @@ export default class Interaction extends RX {
         this.$container.addEventListener(WHEEL, (ev) => {
             ev.preventDefault();
         }, false);
+
+        this.$container.addEventListener(CONTEXTMENU, (ev) => {
+            ev.preventDefault();
+        }, false)
     }
 
     private pan(deltaX: number, deltaY: number) {
         let data = this.model.data;
         data.translateX += deltaX;
         data.translateY += deltaY;
-        
-        this.keepVisible();
     }
 
     private scale (newScaleValue: number, originXRate?: number, originYRate?: number): void {
@@ -208,8 +215,6 @@ export default class Interaction extends RX {
         // 算出 origin 和 当前$dom 的 差值
         data.translateX = (left + width * originXRate) - (containerLeft + offsetX + originWidth * originXRate);
         data.translateY = (top + height * originYRate) - (containerTop + offsetY + originHeight * originYRate);
-
-        this.keepVisible();
     }
 
     private keepVisible() {
@@ -242,8 +247,8 @@ export default class Interaction extends RX {
         const diffY = y - originY;
 
         let data = this.model.data;
-        data.translateX += diffX;
-        data.translateY += diffY;
+        this.model.pureSet('translateX', data.translateX + diffX);
+        this.model.pureSet('translateY', data.translateY + diffY);
     }
 
     private isMovable(): boolean {

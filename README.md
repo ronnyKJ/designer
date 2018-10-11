@@ -29,3 +29,5 @@
 ## TODO
 
 
+## 问题
+长度计算有时候用 offsetWidth offsetLeft 等dom属性，有时候用长度数据运算，会有小数级别的偏差

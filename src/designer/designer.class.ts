@@ -58,7 +58,7 @@ export default class Designer {
         
         const $interactionDom: HTMLElement = config.$container.querySelector(`.${interactionStyles.interaction}`);
         let interaction: Interaction = new Interaction(model, $interactionDom, config); // 单例
-        // let canvas: Canvas = new Canvas(model, interaction, config); // 允许多例
+        let canvas: Canvas = new Canvas(model, config); // 允许多例
 
         if (config.$navigator) {
             let navigator: Navigator = new Navigator(model, config.$navigator, config);

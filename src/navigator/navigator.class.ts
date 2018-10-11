@@ -126,7 +126,7 @@ export default class Navigator extends RX {
             scopeOffsetX = 0;
         }
 
-        if (scopeOffsetY + scopeHeight > thumbnailHeight) {
+        if (scopeOffsetY + scopeHeight >= thumbnailHeight) {
             scopeHeight = thumbnailHeight - scopeOffsetY;
         }
 
@@ -150,26 +150,15 @@ export default class Navigator extends RX {
         const self = this;
         new Action({
             $target: this.$scope,
+            $wheelTarget: this.$navigator,
             onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
-                if (device.isMouseLeftButtonDown) {
-                    // const thumbnailWidth = self.$thumbnail.offsetWidth;
-                    // const thumbnailHeight = self.$thumbnail.offsetHeight;
-
-                    // let data = this.model.data;
-                    // let tmpX = -deltaX / thumbnailWidth * data.interactionWidth;
-                    // let tmpY = -deltaY / thumbnailHeight * data.interactionHeight;
-
-                    // if (thumbnailWidth === self.$scope.offsetWidth) {
-                    //     tmpX = 0;
-                    // }
-
-                    // if (thumbnailHeight === self.$scope.offsetHeight) {
-                    //     tmpY = 0;
-                    // }
-
-                    // data.interactionX -= tmpX;
-                    // data.interactionY -= tmpY;
-                }
+                /*
+                    * 将当前鼠标位移按照比例换算到原画布上
+                    */
+                const { offsetWidth: thumbnailWidth, offsetHeight: thumbnailHeight } =  self.$thumbnail;
+                let data = self.model.data;
+                data.translateX -= deltaX * data.canvasWidth / thumbnailWidth;
+                data.translateY -= deltaY * data.canvasHeight / thumbnailHeight;
             },
             cursor: {
                 pointerOver: CURSOR_GRAB,

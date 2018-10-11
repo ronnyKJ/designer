@@ -19,6 +19,7 @@ import {
 
 export default class Action {
     private $target: HTMLElement;
+    private $targetContainer: Window;
     private $wheelTarget: HTMLElement;
 
     private state: any;
@@ -34,6 +35,7 @@ export default class Action {
         }
 
         this.$target = config.$target;
+        this.$targetContainer = window;
         this.$wheelTarget = config.$wheelTarget || this.$target;
         const pointerOverCursor = this.config.cursor.pointerOver;
         if (pointerOverCursor) {
@@ -87,8 +89,8 @@ export default class Action {
         const pointerDownHandler = wrap((device: IActionDevice, ev: MouseEvent) => {
             this.onPointerDown(device, ev);
 
-            window.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
-            window.addEventListener(POINTER_UP, pointerUpHandler, false);
+            this.$targetContainer.addEventListener(POINTER_MOVE, pointerMoveHandler, false);
+            this.$targetContainer.addEventListener(POINTER_UP, pointerUpHandler, false);
         });
 
         const pointerMoveHandler = wrap((device: IActionDevice, ev: MouseEvent) => {
@@ -98,8 +100,8 @@ export default class Action {
         const pointerUpHandler = wrap((device: IActionDevice, ev: MouseEvent) => {
             this.onPointerUp(device, ev);
 
-            window.removeEventListener(POINTER_MOVE, pointerMoveHandler);
-            window.removeEventListener(POINTER_UP, pointerUpHandler);
+            this.$targetContainer.removeEventListener(POINTER_MOVE, pointerMoveHandler);
+            this.$targetContainer.removeEventListener(POINTER_UP, pointerUpHandler);
         });
 
         this.$target.addEventListener(POINTER_DOWN, pointerDownHandler, false);

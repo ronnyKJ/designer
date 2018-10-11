@@ -6,6 +6,7 @@ export const POINTER_DOWN: string = 'mousedown';
 export const POINTER_MOVE: string = 'mousemove';
 export const POINTER_UP: string = 'mouseup';
 export const POINT_CLICK: string = 'click';
+export const CONTEXTMENU: string = 'contextmenu';
 export const WHEEL: string = 'wheel';
 export const KEY_DOWN: string = 'keydown';
 export const KEY_UP: string = 'keyup';

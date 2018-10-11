@@ -38,7 +38,12 @@ class Model {
                             return value;
                         }
                     },
-                    set (newValue){
+                    set (newValue: any){
+                        const isPureSet = typeof newValue === 'object' && newValue.pure === true;
+                        if (isPureSet) {
+                            newValue = newValue.value;
+                        }
+
                         if (computed && prop in computed) {
                             let setter = computed[prop].set;
                             if (typeof setter === 'function') {
@@ -48,6 +53,10 @@ class Model {
                             }
                         } else {
                             value = newValue;
+                        }
+
+                        if (isPureSet) {
+                            return;
                         }
 
                         let propQueue = self.queues[prop];
@@ -70,6 +79,13 @@ class Model {
 
     public set (prop: string, value: any) {
         this.data[prop] = value;
+    }
+
+    public pureSet (prop: string, value: any) {
+        this.data[prop] = {
+            pure: true,
+            value: value
+        };
     }
 
     public watch (props: Array<string>, callback: Function): void {

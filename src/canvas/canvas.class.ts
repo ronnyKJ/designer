@@ -5,19 +5,14 @@ import * as styles from './canvas.less';
 import utils from '../core/utils';
 import IDesignerConfig from '../interface/designerConfig.interface';
 import ICanvasStyle from '../interface/canvasRectInfo.interface';
-import Event from '../core/event';
 
 
 export default class Canvas {
     private $container: HTMLElement;
     private $canvas: HTMLElement;
-    private interaction: Interaction;
-    private width: number;
-    private height: number;
 
-    constructor (data: any, interaction: Interaction, config: IDesignerConfig) {
+    constructor (data: any, config: IDesignerConfig) {
         this.$container = config.$container;
-        this.interaction = interaction;
         this.$canvas = this.$container.querySelector(`.${styles.canvas}`);
 
         // const interRect = this.interaction.getInteractionRect();
