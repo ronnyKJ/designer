@@ -61,7 +61,7 @@ export default class Navigator extends RX {
     }
 
     updateView (): void {
-        this.setVisibleScope();
+        this.scope();
         const scale = this.model.data.scale.toFixed(1);
         this.$range.value = scale.toString();
         this.$text.value = scale.toString();
@@ -92,7 +92,7 @@ export default class Navigator extends RX {
         }
     }
 
-    private setVisibleScope (): void {
+    private scope (): void {
         /*
          * 导航器: 
          * 缩略图相当于画布，可视范围框相当于画布的容器
@@ -103,7 +103,7 @@ export default class Navigator extends RX {
             offsetHeight: containerHeight
         } = this.$container;
         const {
-            canvasOriginWidth, canvasOriginHeight, interactionOffsetX, interactionOffsetY
+            canvasWidth, canvasHeight, interactionOffsetX, interactionOffsetY
         } = this.model.data;
 
         const {
@@ -111,10 +111,10 @@ export default class Navigator extends RX {
             offsetHeight: thumbnailHeight
         } = this.$thumbnail;
 
-        let scopeWidth = containerWidth / canvasOriginWidth * thumbnailWidth;
-        let scopeHeight = containerHeight / canvasOriginHeight * thumbnailHeight;
-        let scopeOffsetX = -interactionOffsetX / canvasOriginWidth * thumbnailWidth;
-        let scopeOffsetY = -interactionOffsetY / canvasOriginHeight * thumbnailHeight;
+        let scopeWidth = containerWidth / canvasWidth * thumbnailWidth;
+        let scopeHeight = containerHeight / canvasHeight * thumbnailHeight;
+        let scopeOffsetX = -interactionOffsetX / canvasWidth * thumbnailWidth;
+        let scopeOffsetY = -interactionOffsetY / canvasHeight * thumbnailHeight;
         
         // 以下对超出缩略图范围做限制
         if (scopeOffsetX + scopeWidth > thumbnailWidth) {
@@ -152,23 +152,23 @@ export default class Navigator extends RX {
             $target: this.$scope,
             onPan (deltaX: number, deltaY: number, device?: IActionDevice, ev?: MouseEvent) {
                 if (device.isMouseLeftButtonDown) {
-                    const thumbnailWidth = self.$thumbnail.offsetWidth;
-                    const thumbnailHeight = self.$thumbnail.offsetHeight;
+                    // const thumbnailWidth = self.$thumbnail.offsetWidth;
+                    // const thumbnailHeight = self.$thumbnail.offsetHeight;
 
-                    let data = this.model.data;
-                    let tmpX = -deltaX / thumbnailWidth * data.interactionWidth;
-                    let tmpY = -deltaY / thumbnailHeight * data.interactionHeight;
+                    // let data = this.model.data;
+                    // let tmpX = -deltaX / thumbnailWidth * data.interactionWidth;
+                    // let tmpY = -deltaY / thumbnailHeight * data.interactionHeight;
 
-                    if (thumbnailWidth === self.$scope.offsetWidth) {
-                        tmpX = 0;
-                    }
+                    // if (thumbnailWidth === self.$scope.offsetWidth) {
+                    //     tmpX = 0;
+                    // }
 
-                    if (thumbnailHeight === self.$scope.offsetHeight) {
-                        tmpY = 0;
-                    }
+                    // if (thumbnailHeight === self.$scope.offsetHeight) {
+                    //     tmpY = 0;
+                    // }
 
-                    data.interactionX -= tmpX;
-                    data.interactionY -= tmpY;
+                    // data.interactionX -= tmpX;
+                    // data.interactionY -= tmpY;
                 }
             },
             cursor: {
